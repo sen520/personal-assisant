@@ -7,8 +7,8 @@
 | 原镜像 | 国内镜像 |
 |--------|----------|
 | docker.io/library/mysql | swr.cn-north-4.myhuaweicloud.com/ddn-k8s/gcr.io/ml-pipeline/mysql:8.0.26 |
-| docker.io/library/redis | docker.aityp.com/library/redis |
-| docker.io/chromadb/chroma | docker.aityp.com/chromadb/chroma |
+| docker.io/library/redis | swr.cn-north-4.myhuaweicloud.com/ddn-k8s/quay.io/opstree/redis:v7.0.5 |
+| docker.io/chromadb/chroma | swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/chromadb/chroma:latest |
 
 ## 使用方法
 
