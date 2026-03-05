@@ -1,6 +1,7 @@
 # MySQL 8.0 for Personal Assistant
+# 使用国内镜像加速
 
-FROM mysql:8.0
+FROM docker.aityp.com/library/mysql:8.0
 
 # 设置环境变量
 ENV MYSQL_ROOT_PASSWORD=root_password
