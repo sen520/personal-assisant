@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 import uvicorn
 
@@ -167,6 +169,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ============================================================================
+# 静态文件服务
+# ============================================================================
+
+@app.get("/")
+def root():
+    """根路径 - 返回前端页面"""
+    return FileResponse("static/index.html")
+
+
+# 挂载静态文件
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # ============================================================================
@@ -528,16 +544,6 @@ def get_stats(user_id: str = Depends(verify_token)):
 def health_check():
     """健康检查"""
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
-
-
-@app.get("/")
-def root():
-    """根路径"""
-    return {
-        "name": "Personal Assistant API",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
 
 
 # ============================================================================

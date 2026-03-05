@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人助理 - AI Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- 登录页面 -->
+    <div id="auth-page" class="page active">
+        <div class="auth-container">
+            <div class="auth-box">
+                <h1>🤖 个人助理</h1>
+                <p class="subtitle">您的智能 AI 助手</p>
+                
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="login">登录</button>
+                    <button class="tab-btn" data-tab="register">注册</button>
+                </div>
+                
+                <!-- 登录表单 -->
+                <form id="login-form" class="auth-form">
+                    <input type="text" id="login-username" placeholder="用户名" required>
+                    <input type="password" id="login-password" placeholder="密码" required>
+                    <button type="submit" class="btn-primary">登录</button>
+                </form>
+                
+                <!-- 注册表单 -->
+                <form id="register-form" class="auth-form hidden">
+                    <input type="text" id="register-username" placeholder="用户名" required>
+                    <input type="password" id="register-password" placeholder="密码" required>
+                    <input type="email" id="register-email" placeholder="邮箱（可选）">
+                    <button type="submit" class="btn-primary">注册</button>
+                </form>
+                
+                <p id="auth-error" class="error-message"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主应用页面 -->
+    <div id="app-page" class="page">
+        <div class="app-container">
+            <!-- 侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>🤖 个人助理</h2>
+                    <button id="new-chat-btn" class="btn-new-chat">+ 新对话</button>
+                </div>
+                
+                <nav class="nav-menu">
+                    <a href="#" class="nav-item active" data-page="chat">
+                        <span>💬</span> 对话
+                    </a>
+                    <a href="#" class="nav-item" data-page="tasks">
+                        <span>📋</span> 任务
+                    </a>
+                    <a href="#" class="nav-item" data-page="memories">
+                        <span>🧠</span> 记忆
+                    </a>
+                    <a href="#" class="nav-item" data-page="stats">
+                        <span>📊</span> 统计
+                    </a>
+                </nav>
+                
+                <div class="session-list">
+                    <h3>最近对话</h3>
+                    <div id="sessions-container">
+                        <!-- 会话列表动态加载 -->
+                    </div>
+                </div>
+                
+                <div class="sidebar-footer">
+                    <span id="user-name">User</span>
+                    <button id="logout-btn" class="btn-logout">退出</button>
+                </div>
+            </aside>
+
+            <!-- 主内容区 -->
+            <main class="main-content">
+                <!-- 对话页面 -->
+                <div id="chat-page" class="content-page active">
+                    <div class="chat-container">
+                        <div id="chat-messages" class="chat-messages">
+                            <div class="welcome-message">
+                                <h2>👋 你好！</h2>
+                                <p>我是你的个人助理，可以帮你：</p>
+                                <ul>
+                                    <li>💬 聊天对话</li>
+                                    <li>🧠 记住重要信息</li>
+                                    <li>📋 管理任务</li>
+                                    <li>🔍 搜索信息</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="chat-input-container">
+                            <textarea id="chat-input" placeholder="输入消息..." rows="1"></textarea>
+                            <button id="send-btn" class="btn-send">➤</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 任务页面 -->
+                <div id="tasks-page" class="content-page">
+                    <div class="page-header">
+                        <h2>📋 任务管理</h2>
+                        <button id="new-task-btn" class="btn-primary">+ 新建任务</button>
+                    </div>
+                    <div id="tasks-list" class="tasks-list">
+                        <!-- 任务列表动态加载 -->
+                    </div>
+                </div>
+
+                <!-- 记忆页面 -->
+                <div id="memories-page" class="content-page">
+                    <div class="page-header">
+                        <h2>🧠 我的记忆</h2>
+                        <button id="new-memory-btn" class="btn-primary">+ 添加记忆</button>
+                    </div>
+                    <div id="memories-list" class="memories-list">
+                        <!-- 记忆列表动态加载 -->
+                    </div>
+                </div>
+
+                <!-- 统计页面 -->
+                <div id="stats-page" class="content-page">
+                    <div class="page-header">
+                        <h2>📊 使用统计</h2>
+                    </div>
+                    <div id="stats-container" class="stats-grid">
+                        <!-- 统计数据动态加载 -->
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 新建任务弹窗 -->
+    <div id="task-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>新建任务</h3>
+            <input type="text" id="task-title" placeholder="任务标题">
+            <textarea id="task-desc" placeholder="任务描述（可选）"></textarea>
+            <select id="task-priority">
+                <option value="1">🔴 高优先级</option>
+                <option value="3" selected>🟡 中优先级</option>
+                <option value="5">🟢 低优先级</option>
+            </select>
+            <div class="modal-actions">
+                <button class="btn-cancel">取消</button>
+                <button class="btn-confirm">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加记忆弹窗 -->
+    <div id="memory-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>添加记忆</h3>
+            <textarea id="memory-content" placeholder="输入要记忆的内容..."></textarea>
+            <select id="memory-category">
+                <option value="general">📝 一般</option>
+                <option value="preference">❤️ 偏好</option>
+                <option value="fact">📚 事实</option>
+                <option value="task">✅ 任务</option>
+            </select>
+            <div class="modal-actions">
+                <button class="btn-cancel">取消</button>
+                <button class="btn-confirm">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
