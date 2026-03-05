@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     db_port: str = "3306"
     db_name: str = "personal_assistant"
     
+    # SQLite 模式（开发/测试用）
+    use_sqlite: bool = True
+    sqlite_path: str = "./data/app.db"
+    
     # 项目配置
     project_name: str = "personal-assistant"
     debug: bool = False

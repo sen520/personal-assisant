@@ -225,18 +225,26 @@ class DatabaseManager:
     def init_engine(self, database_url: Optional[str] = None):
         """初始化数据库引擎"""
         if database_url is None:
-            # 从环境变量或配置构建
-            db_user = getattr(settings, 'db_user', 'root')
-            db_password = getattr(settings, 'db_password', 'password')
-            db_host = getattr(settings, 'db_host', 'localhost')
-            db_port = getattr(settings, 'db_port', '3306')
-            db_name = getattr(settings, 'db_name', 'personal_assistant')
-            database_url = f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+            # 根据配置选择数据库类型
+            if getattr(settings, 'use_sqlite', True):
+                # SQLite 模式（开发/测试）
+                import os
+                sqlite_path = getattr(settings, 'sqlite_path', './data/app.db')
+                os.makedirs(os.path.dirname(sqlite_path), exist_ok=True)
+                database_url = f"sqlite:///{sqlite_path}"
+            else:
+                # MySQL 模式（生产）
+                db_user = getattr(settings, 'db_user', 'root')
+                db_password = getattr(settings, 'db_password', 'password')
+                db_host = getattr(settings, 'db_host', 'localhost')
+                db_port = getattr(settings, 'db_port', '3306')
+                db_name = getattr(settings, 'db_name', 'personal_assistant')
+                database_url = f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
         
         self._engine = create_engine(
             database_url,
-            pool_size=5,
-            max_overflow=10,
+            pool_size=5 if 'mysql' in database_url else 1,
+            max_overflow=10 if 'mysql' in database_url else 0,
             pool_recycle=3600,
             echo=settings.debug
         )
