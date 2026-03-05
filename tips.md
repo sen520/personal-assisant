@@ -68,7 +68,7 @@
 - [x] MySQL Dockerfile
 - [x] docker-compose.yml（添加 MySQL 服务）
 - [x] 数据库初始化脚本（sql/init.sql）
-- [ ] 启动并测试 MySQL 容器
+- [x] 启动并测试 MySQL 容器 ✅
 
 ### 🟡 高优先级（功能开发）
 
