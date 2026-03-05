@@ -1,0 +1,228 @@
+[MASTER]
+# 指定要检查的文件/目录
+init-hook='import sys; sys.path.append("src")'
+
+# 忽略的文件/目录
+ignore=
+    .git,
+    __pycache__,
+    build,
+    dist,
+    .venv,
+    venv,
+    .tox,
+    .pytest_cache,
+    *.egg-info,
+    migrations,
+    alembic
+
+# 要加载的插件
+load-plugins=
+    pylint.extensions.docparams,
+    pylint.extensions.check_elif
+
+# 工作进程数（0=自动）
+jobs=0
+
+[MESSAGES CONTROL]
+# 禁用的检查规则
+disable=
+    C0103,  # 命名规范（允许非标准命名）
+    C0114,  # 模块缺少 docstring
+    C0115,  # 类缺少 docstring
+    C0116,  # 函数缺少 docstring
+    R0903,  # 类方法太少（允许简单数据类）
+    R0913,  # 参数太多（允许灵活函数）
+    R0914,  # 局部变量太多
+    W0511,  # TODO/FIXME 警告（保留这些标记）
+    W0613,  # 未使用参数（某些回调必需）
+    R0801,  # 相似代码（允许部分重复）
+    E1101   # 动态属性访问（SQLAlchemy 等框架）
+
+# 启用的检查规则
+enable=
+    E,      # 错误
+    F,      # 致命错误
+    W,      # 警告
+    C,      # 惯例（部分禁用见上）
+    R       # 重构建议（部分禁用见上）
+
+[REPORTS]
+# 输出格式
+output-format=colorized
+
+# 是否显示完整报告
+reports=yes
+
+# 评分阈值（低于此值退出码非0，阻止提交）
+fail-under=8.0
+
+# 评分表达式
+evaluation=max(0, 0 if fatal else 10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10))
+
+[BASIC]
+# 命名规范
+function-rgx=[a-z_][a-z0-9_]{2,50}$
+method-rgx=[a-z_][a-z0-9_]{2,50}$
+attr-rgx=[a-z_][a-z0-9_]{2,50}$
+argument-rgx=[a-z_][a-z0-9_]{0,50}$
+variable-rgx=[a-z_][a-z0-9_]{0,50}$
+class-rgx=[A-Z_][a-zA-Z0-9_]+$
+const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
+module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
+
+# 变量名正则
+class-attribute-rgx=([A-Za-z_][A-Za-z0-9_]{2,}|(__.*__))$
+inlinevar-rgx=[A-Za-z_][A-Za-z0-9_]*$
+
+# 属性创建 good-names
+# good-names=i,j,k,ex,Run,_
+
+# 属性创建 bad-names
+# bad-names=foo,bar,baz,toto,tutu,tata
+
+# 属性名包含正则
+# include-naming-hint=no
+
+# 属性名忽略正则
+# property-classes=abc.abstractproperty
+
+[FORMAT]
+# 最大行长度
+max-line-length=120
+
+# 忽略长行的正则
+ignore-long-lines=^\s*(# )?<?https?://\S+>?$
+
+# 单行长度的最大字符数
+single-line-if-stmt=no
+
+# 最大模块行数
+max-module-lines=2000
+
+# 缩进字符串
+indent-string='    '
+
+# 缩进后换行
+indent-after-paren=4
+
+# 预期空行数
+expected-line-ending-format=LF
+
+[SIMILARITIES]
+# 最小相似行数
+min-similarity-lines=4
+
+# 忽略注释
+ignore-comments=yes
+
+# 忽略 docstrings
+ignore-docstrings=yes
+
+# 忽略导入
+ignore-imports=yes
+
+[VARIABLES]
+# 生成内联的 init 变量
+init-import=no
+
+# 假阳性时的变量名
+# dummy-variables-rgx=_$|dummy|unused|ignored
+
+# 回调的其他参数
+# callbacks=cb_,_cb
+
+[CLASSES]
+# 定义 __init__ 时的属性名正则
+# defining-attr-methods=__init__,__new__,setUp,__post_init__
+
+# 有效的类名首字母正则
+# valid-classmethod-first-arg=cls
+
+# 有效的元类首字母正则
+# valid-metaclass-classmethod-first-arg=mcs
+
+[DESIGN]
+# 最大参数数
+max-args=10
+
+# 最大属性数
+max-attributes=15
+
+# 最大布尔表达式数
+max-bool-expr=5
+
+# 最大分支数
+max-branches=15
+
+# 最大 locals 数
+max-locals=20
+
+# 最大方法数
+max-public-methods=30
+
+# 最大父类数
+max-parents=7
+
+# 最大返回数
+max-returns=10
+
+# 最大语句数
+max-statements=60
+
+# 最小 public 方法数
+min-public-methods=0
+
+[IMPORTS]
+# 允许多行导入
+disable=multiple-imports
+
+# 分析内部导入时的深度限制
+# int-import-graph=
+
+# 分析外部导入时的深度限制
+# ext-import-graph=
+
+[MISCELLANEOUS]
+# 要注释的 FIXME/TODO/XXX 标记
+notes=FIXME,XXX,TODO
+
+[TYPECHECK]
+# 忽略成员属性的类名列表
+ignored-classes=
+    SQLObject,
+    optparse.Values,
+    thread._local,
+    _thread._local,
+    sqlalchemy.orm.Session,
+    sqlalchemy.engine.Engine
+
+# 忽略特定 mixin 类
+# ignore-mixin-members=yes
+
+# 当对象类型无法推断时，返回对象
+# ignore-on-opaque-inference=yes
+
+# 忽略的模块
+ignored-modules=
+    numpy,
+    pandas,
+    torch,
+    tensorflow,
+    langgraph,
+    langchain,
+    chromadb,
+    fastapi,
+    sqlalchemy,
+    alembic
+
+[EXCEPTIONS]
+# 要捕获的异常名称
+overgeneral-exceptions=builtins.BaseException,builtins.Exception
+
+[REFACTORING]
+# 最大嵌套块数
+max-nested-blocks=5
+
+# 从不返回的函数名
+# never-returning-functions=sys.exit,argparse.parse_error
