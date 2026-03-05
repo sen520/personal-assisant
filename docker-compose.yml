@@ -3,10 +3,7 @@ version: '3.8'
 services:
   # MySQL 数据库服务
   mysql:
-    build:
-      context: ./docker/mysql
-      dockerfile: Dockerfile
-    image: personal-assistant/mysql:latest
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/gcr.io/ml-pipeline/mysql:8.0.26
     container_name: assistant-mysql
     ports:
       - "3306:3306"

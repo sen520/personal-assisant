@@ -1,7 +1,7 @@
 # MySQL 8.0 for Personal Assistant
-# 使用国内镜像加速
+# 使用华为云镜像加速
 
-FROM docker.aityp.com/library/mysql:8.0
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/gcr.io/ml-pipeline/mysql:8.0.26
 
 # 设置环境变量
 ENV MYSQL_ROOT_PASSWORD=root_password

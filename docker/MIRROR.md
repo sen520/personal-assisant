@@ -6,7 +6,7 @@
 
 | 原镜像 | 国内镜像 |
 |--------|----------|
-| docker.io/library/mysql | docker.aityp.com/library/mysql |
+| docker.io/library/mysql | swr.cn-north-4.myhuaweicloud.com/ddn-k8s/gcr.io/ml-pipeline/mysql:8.0.26 |
 | docker.io/library/redis | docker.aityp.com/library/redis |
 | docker.io/chromadb/chroma | docker.aityp.com/chromadb/chroma |
 
@@ -38,16 +38,17 @@ sudo systemctl restart docker
 ```yaml
 services:
   mysql:
-    image: docker.aityp.com/library/mysql:8.0
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/gcr.io/ml-pipeline/mysql:8.0.26
 ```
 
 ```dockerfile
-FROM docker.aityp.com/library/mysql:8.0
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/gcr.io/ml-pipeline/mysql:8.0.26
 ```
 
 ## 镜像源列表
 
-- **docker.aityp.com** - 用户提供的镜像站
+- **swr.cn-north-4.myhuaweicloud.com** - 华为云镜像（推荐，稳定）
+- **docker.aityp.com** - 用户提供的镜像站（需认证）
 - **docker.mirrors.ustc.edu.cn** - 中科大镜像
 - **hub-mirror.c.163.com** - 网易云镜像
 - **docker.m.daocloud.io** - DaoCloud 镜像
@@ -56,8 +57,14 @@ FROM docker.aityp.com/library/mysql:8.0
 
 ```bash
 # 测试拉取速度
-docker pull docker.aityp.com/library/mysql:8.0
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/gcr.io/ml-pipeline/mysql:8.0.26
 
 # 查看镜像信息
 docker images | grep mysql
 ```
+
+## 注意事项
+
+- 华为云镜像站无需认证，可直接使用
+- 部分镜像站可能需要登录或已停止服务
+- 如遇到拉取失败，尝试更换其他镜像源
