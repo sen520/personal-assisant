@@ -390,23 +390,87 @@ personal-assistant/
 
 ## 5. 开发计划
 
-### Phase 1: 基础设施 (2周)
-- [ ] MySQL 数据库搭建
-- [ ] Docker 环境配置
-- [ ] 数据库 ORM 建模
-- [ ] 用户认证模块
-- [ ] 数据迁移脚本
+### ✅ 已完成
 
-### Phase 2: 记忆系统改造 (1周)
-- [ ] 适配多用户架构
-- [ ] 短期记忆 MySQL 化
-- [ ] 长期记忆整合
-- [ ] 用户画像管理
+- [x] 项目基础结构搭建
+- [x] Git 工作流配置（PR + Code Review）
+- [x] 单机版记忆系统（短期/长期/用户画像）
+- [x] 数据模型设计（Message, Task, MemoryItem 等）
+- [x] Pylint 代码检查配置（pre-commit hook）
+- [x] Docker 环境配置（ChromaDB + Redis）
+- [x] 项目规划手册（plan.md）
 
-### Phase 3: 核心工作流 (2周)
-- [ ] LangGraph 节点实现
-- [ ] LLM 客户端集成
-- [ ] 状态管理机制
+### Phase 1: MySQL 基础设施 (1-2周)
+- [ ] **Day 1-2: MySQL Docker 环境**
+  - MySQL Dockerfile
+  - docker-compose.yml 更新
+  - 数据库初始化脚本（sql/init.sql）
+  
+- [ ] **Day 3-4: 数据库连接与 ORM**
+  - 安装 SQLAlchemy + pymysql
+  - 数据库连接池配置
+  - ORM 模型定义（8张表）
+  
+- [ ] **Day 5-7: 数据库迁移**
+  - Alembic 配置
+  - 初始迁移脚本
+  - 数据导入测试
+
+### Phase 2: 用户认证系统 (1周)
+- [ ] **Day 1-2: 用户模型与 API**
+  - 用户注册 API
+  - 用户登录 API
+  - 密码哈希（bcrypt）
+  
+- [ ] **Day 3-4: JWT 认证**
+  - Token 生成与验证
+  - API 认证中间件
+  - Token 刷新机制
+  
+- [ ] **Day 5: 集成测试**
+  - 注册/登录流程测试
+  - 认证保护测试
+
+### Phase 3: 记忆系统 MySQL 化 (1-2周)
+- [ ] **Day 1-3: 短期记忆改造**
+  - messages 表操作
+  - 会话管理 MySQL 化
+  - 短期记忆数据迁移
+  
+- [ ] **Day 4-6: 长期记忆改造**
+  - memories 表操作
+  - 向量存储与 MySQL 结合
+  - 语义检索适配
+  
+- [ ] **Day 7-10: 用户画像改造**
+  - user_profiles 表操作
+  - 画像数据迁移
+  - 多用户数据隔离验证
+
+### Phase 4: LangGraph 工作流 (2周)
+- [ ] **Week 1: 基础节点**
+  - input.py（输入预处理）
+  - intent.py（意图分析）
+  - memory.py（记忆检索）
+  - planning.py（工作流规划）
+  
+- [ ] **Week 2: 执行与输出**
+  - execution.py（执行）
+  - validation.py（验证）
+  - memory_update.py（记忆更新）
+  - output.py（输出生成）
+
+### Phase 5: API 服务 (1周)
+- [ ] FastAPI 接口封装
+- [ ] RESTful API 设计
+- [ ] WebSocket 实时对话
+- [ ] API 文档（Swagger）
+
+### Phase 6: 工具与优化 (1周)
+- [ ] 工具集实现
+- [ ] 性能优化
+- [ ] 监控日志
+- [ ] 部署文档
 - [ ] 端到端测试
 
 ### Phase 4: API 服务 (1周)

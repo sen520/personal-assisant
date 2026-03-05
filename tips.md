@@ -30,7 +30,13 @@
 - [x] Docker 使用文档
 - [ ] ~~启动 ChromaDB 容器~~（网络问题，待后续）
 
-### 3. 记忆系统（核心功能 - 单机版）
+### 3. 开发工具配置
+- [x] Pylint 代码检查配置（评分阈值 8.0）
+- [x] pre-commit hook（提交前自动检查）
+- [ ] 单元测试框架（pytest）
+- [ ] CI/CD 配置（GitHub Actions）
+
+### 4. 记忆系统（核心功能 - 单机版）
 - [x] 数据模型（Message, Task, MemoryItem, Intent 等）
 - [x] 短期记忆（滑动窗口 + 智能压缩 + 关键节点）
 - [x] 长期记忆（向量存储 + 语义检索）
@@ -245,12 +251,28 @@ CREATE TABLE conversation_summaries (
 
 ## 🎯 下一步建议
 
-1. **先设计 MySQL Schema** 并创建初始化脚本
-2. **搭建 MySQL Docker 环境**（本地或服务器）
-3. **实现用户认证模块**（注册/登录/JWT）
-4. **改造记忆系统** 支持多用户和 MySQL
-5. **实现工作流节点**
+1. **🔴 Phase 1: MySQL 数据库**
+   - [ ] 搭建 MySQL Docker 环境
+   - [ ] 创建数据库初始化脚本（sql/init.sql）
+   - [ ] 配置 SQLAlchemy ORM 模型
+   - [ ] 数据库连接池配置
+
+2. **🔴 Phase 2: 用户认证系统**
+   - [ ] 用户注册/登录 API
+   - [ ] JWT Token 认证
+   - [ ] 密码哈希存储（bcrypt）
+
+3. **🔴 Phase 3: 记忆系统 MySQL 化**
+   - [ ] 改造短期记忆（messages 表）
+   - [ ] 改造长期记忆（memories 表）
+   - [ ] 用户画像 MySQL 存储
+   - [ ] 确保多用户数据隔离
+
+4. **🟡 Phase 4: LangGraph 工作流**
+   - [ ] 实现 8 个工作流节点
+   - [ ] LLM 客户端集成
+   - [ ] 状态管理完善
 
 ---
 
-*最后更新：2026-03-05*
+*最后更新：2026-03-05 21:13*
