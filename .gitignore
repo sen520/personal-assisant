@@ -48,12 +48,11 @@ htmlcov/
 # Logs
 logs/*.log
 
-# Memory and data (keep structure, ignore content)
+# Data
 memory/*.md
 !memory/.gitkeep
-
-# Chroma DB
 chroma_db/
+data/
 
 # OS
 .DS_Store
@@ -66,3 +65,6 @@ Thumbs.db
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Project specific
+PR_BODY.md
