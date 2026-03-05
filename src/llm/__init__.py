@@ -108,14 +108,17 @@ class OpenAICompatibleClient(LLMClient):
         """对话"""
         formatted_messages = []
         for m in messages:
-            msg = {"role": m.role, "content": m.content}
+            msg: Dict[str, Any] = {"role": m.role, "content": m.content or ""}
             if m.tool_calls:
                 msg["tool_calls"] = m.tool_calls
             if m.tool_call_id:
                 msg["tool_call_id"] = m.tool_call_id
+                # tool 消息需要 name 字段
+                if m.name:
+                    msg["name"] = m.name
             formatted_messages.append(msg)
 
-        params = {
+        params: Dict[str, Any] = {
             "model": self.config.model,
             "messages": formatted_messages,
             "temperature": self.config.temperature,
@@ -125,6 +128,7 @@ class OpenAICompatibleClient(LLMClient):
 
         if tools:
             params["tools"] = tools
+            params["tool_choice"] = "auto"
 
         response = await self.client.chat.completions.create(**params)
 
