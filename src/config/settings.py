@@ -21,6 +21,22 @@ class Settings(BaseSettings):
     kimi_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
     
+    # LLM 配置（新）
+    llm_provider: str = "openai"
+    llm_model: str = "deepseek-ai/DeepSeek-V3"
+    llm_api_key: Optional[str] = None
+    llm_base_url: str = "https://api.siliconflow.cn/v1"
+    
+    # 嵌入模型
+    embedding_model: str = "BAAI/bge-large-zh-v1.5"
+    
+    # 数据库配置
+    db_user: str = "root"
+    db_password: str = "password"
+    db_host: str = "localhost"
+    db_port: str = "3306"
+    db_name: str = "personal_assistant"
+    
     # 项目配置
     project_name: str = "personal-assistant"
     debug: bool = False
