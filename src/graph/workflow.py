@@ -2,6 +2,7 @@
 LangGraph 工作流定义 - 个人助理的核心流程
 """
 
+import asyncio
 from typing import Literal
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
@@ -25,23 +26,23 @@ def create_workflow() -> StateGraph:
     """
     # 初始化状态图
     workflow = StateGraph(AssistantState)
-    
-    # 添加节点
+
+    # 添加节点（注意：异步节点需要在运行时处理）
     workflow.add_node("user_input", user_input_node)
-    workflow.add_node("intent_analysis", intent_analysis_node)
-    workflow.add_node("store_memory", store_memory_node)
-    workflow.add_node("retrieve_memory", retrieve_memory_node)
-    workflow.add_node("task_manager", task_manager_node)
-    workflow.add_node("search", search_node)
-    workflow.add_node("generate_response", generate_response_node)
+    workflow.add_node("intent_analysis", _make_sync(intent_analysis_node))
+    workflow.add_node("store_memory", _make_sync(store_memory_node))
+    workflow.add_node("retrieve_memory", _make_sync(retrieve_memory_node))
+    workflow.add_node("task_manager", _make_sync(task_manager_node))
+    workflow.add_node("search", _make_sync(search_node))
+    workflow.add_node("generate_response", _make_sync(generate_response_node))
     workflow.add_node("end", end_node)
-    
+
     # 设置入口
     workflow.set_entry_point("user_input")
-    
+
     # 添加边
     workflow.add_edge("user_input", "intent_analysis")
-    
+
     # 条件边：根据意图分析结果路由到不同节点
     workflow.add_conditional_edges(
         "intent_analysis",
@@ -54,34 +55,48 @@ def create_workflow() -> StateGraph:
             "generate_response": "generate_response",
         }
     )
-    
+
     # 所有功能节点都指向结束
     workflow.add_edge("store_memory", "end")
     workflow.add_edge("retrieve_memory", "end")
     workflow.add_edge("task_manager", "end")
     workflow.add_edge("search", "end")
     workflow.add_edge("generate_response", "end")
-    
+
     # 结束节点
     workflow.add_edge("end", END)
-    
+
     return workflow
+
+
+def _make_sync(async_func):
+    """将异步函数包装为同步函数（用于 LangGraph）"""
+    def wrapper(state):
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        return loop.run_until_complete(async_func(state))
+
+    return wrapper
 
 
 def build_app(checkpointer=None):
     """
     构建可运行的应用
-    
+
     Args:
         checkpointer: 可选的检查点保存器
-    
+
     Returns:
         可运行的应用
     """
     workflow = create_workflow()
-    
+
     if checkpointer is None:
         checkpointer = MemorySaver()
-    
+
     app = workflow.compile(checkpointer=checkpointer)
     return app
