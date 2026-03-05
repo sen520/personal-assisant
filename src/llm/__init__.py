@@ -106,10 +106,14 @@ class OpenAICompatibleClient(LLMClient):
         stream: bool = False
     ) -> Dict[str, Any]:
         """对话"""
-        formatted_messages = [
-            {"role": m.role, "content": m.content}
-            for m in messages
-        ]
+        formatted_messages = []
+        for m in messages:
+            msg = {"role": m.role, "content": m.content}
+            if m.tool_calls:
+                msg["tool_calls"] = m.tool_calls
+            if m.tool_call_id:
+                msg["tool_call_id"] = m.tool_call_id
+            formatted_messages.append(msg)
 
         params = {
             "model": self.config.model,

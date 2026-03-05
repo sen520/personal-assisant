@@ -72,15 +72,12 @@ class TimeTool(BaseTool):
             "timezone": {
                 "type": "string",
                 "description": "时区，如 'Asia/Shanghai'，默认使用本地时区"
-            },
-            "format": {
-                "type": "string",
-                "description": "时间格式，如 '%Y-%m-%d %H:%M:%S'，默认为 ISO 格式"
             }
-        }
+        },
+        "required": []
     }
 
-    async def execute(self, timezone: Optional[str] = None, fmt: Optional[str] = None) -> ToolResult:
+    async def execute(self, timezone: Optional[str] = None) -> ToolResult:
         """获取当前时间"""
         try:
             if timezone:
@@ -89,10 +86,7 @@ class TimeTool(BaseTool):
             else:
                 now = datetime.now()
 
-            if fmt:
-                time_str = now.strftime(fmt)
-            else:
-                time_str = now.isoformat()
+            time_str = now.isoformat()
 
             return ToolResult(
                 success=True,
