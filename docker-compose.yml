@@ -1,10 +1,37 @@
 version: '3.8'
 
 services:
+  # MySQL 数据库服务
+  mysql:
+    build:
+      context: ./docker/mysql
+      dockerfile: Dockerfile
+    image: personal-assistant/mysql:latest
+    container_name: assistant-mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=personal_assistant
+      - MYSQL_USER=assistant
+      - MYSQL_PASSWORD=assistant_password
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
   # ChromaDB 向量数据库服务
   chromadb:
     build:
-      context: ./chroma
+      context: ./docker/chroma
       dockerfile: Dockerfile
     image: personal-assistant/chroma:latest
     container_name: chromadb
@@ -17,6 +44,9 @@ services:
       - CHROMA_SERVER_HOST=0.0.0.0
       - CHROMA_SERVER_HTTP_PORT=8000
     restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
       interval: 30s
@@ -24,7 +54,7 @@ services:
       retries: 3
       start_period: 40s
 
-  # 可选：Redis 缓存服务（用于短期记忆）
+  # Redis 缓存服务
   redis:
     image: redis:7-alpine
     container_name: assistant-redis
@@ -34,8 +64,12 @@ services:
       - redis_data:/data
     restart: unless-stopped
     command: redis-server --appendonly yes
+    depends_on:
+      - mysql
 
 volumes:
+  mysql_data:
+    driver: local
   chroma_data:
     driver: local
   redis_data:

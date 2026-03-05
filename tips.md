@@ -65,9 +65,10 @@
 - [ ] 数据从 SQLite 迁移到 MySQL
 
 #### 3. Docker 环境更新
-- [ ] MySQL Dockerfile
-- [ ] 更新 docker-compose.yml（添加 MySQL 服务）
-- [ ] 数据库初始化脚本
+- [x] MySQL Dockerfile
+- [x] docker-compose.yml（添加 MySQL 服务）
+- [x] 数据库初始化脚本（sql/init.sql）
+- [ ] 启动并测试 MySQL 容器
 
 ### 🟡 高优先级（功能开发）
 
