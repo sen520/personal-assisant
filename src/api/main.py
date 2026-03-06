@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from typing import Optional
 from datetime import datetime, timedelta
 
+import jwt
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +22,16 @@ from ..db.memory_system import MemorySystemFactory
 
 
 # ============================================================================
+# JWT 配置
+# ============================================================================
+
+# 从环境变量获取密钥，如果没有则使用默认（生产环境必须设置）
+JWT_SECRET_KEY = getattr(settings, 'jwt_secret_key', 'your-secret-key-here-change-in-production')
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_DAYS = 7
+
+
+# ============================================================================
 # 认证相关
 # ============================================================================
 
@@ -28,25 +39,70 @@ security = HTTPBearer()
 
 
 def create_access_token(user_id: str) -> str:
-    """创建访问令牌（简化版，实际应使用 JWT）"""
-    # 简化处理：直接返回 user_id 作为 token
-    # 实际生产环境应使用 PyJWT
-    return f"Bearer_{user_id}"
+    """
+    创建 JWT 访问令牌
+    
+    Args:
+        user_id: 用户 ID
+    
+    Returns:
+        JWT Token
+    """
+    expire = datetime.utcnow() + timedelta(days=JWT_EXPIRE_DAYS)
+    payload = {
+        "user_id": user_id,
+        "exp": expire,
+        "iat": datetime.utcnow(),
+        "type": "access"
+    }
+    token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    return f"Bearer {token}"
 
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
-    """验证令牌并返回用户 ID"""
+    """
+    验证 JWT 令牌并返回用户 ID
+    
+    Args:
+        credentials: HTTP 认证凭证
+    
+    Returns:
+        用户 ID
+    
+    Raises:
+        HTTPException: 令牌无效或过期
+    """
     token = credentials.credentials
     
-    # 简化验证
-    if token.startswith("Bearer_"):
-        return token.replace("Bearer_", "")
+    # 移除 Bearer 前缀
+    if token.startswith("Bearer "):
+        token = token.replace("Bearer ", "")
     
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid authentication credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        user_id = payload.get("user_id")
+        
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token: missing user_id",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        return user_id
+        
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid token: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 # ============================================================================

@@ -627,3 +627,15 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+
+/* 禁用状态样式 */
+#chat-input:disabled {
+    background: var(--bg-color);
+    cursor: not-allowed;
+}
+
+.btn-send:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

@@ -216,46 +216,6 @@ async function loadMessages(sessionId) {
     }
 }
 
-async function sendMessage() {
-    const input = document.getElementById('chat-input');
-    const content = input.value.trim();
-    
-    if (!content) return;
-    
-    // 如果没有当前会话，创建一个
-    if (!state.currentSession) {
-        await createSession();
-    }
-    
-    // 添加用户消息到界面
-    addMessageToChat('user', content);
-    input.value = '';
-    
-    // 显示加载状态
-    const loadingId = addMessageToChat('assistant', '思考中...');
-    
-    try {
-        const data = await apiRequest('/chat', {
-            method: 'POST',
-            body: JSON.stringify({
-                content: content,
-                session_id: state.currentSession
-            })
-        });
-        
-        // 更新当前会话
-        state.currentSession = data.session_id;
-        
-        // 替换加载消息
-        replaceMessage(loadingId, data.assistant_message.content);
-        
-        // 刷新会话列表
-        loadSessions();
-    } catch (error) {
-        replaceMessage(loadingId, '抱歉，我遇到了一些问题。请稍后再试。');
-        console.error('发送消息失败:', error);
-    }
-}
 
 function addMessageToChat(role, content) {
     const messagesDiv = document.getElementById('chat-messages');
