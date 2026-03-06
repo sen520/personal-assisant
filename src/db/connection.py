@@ -149,6 +149,8 @@ def init_database_with_retry(max_retries: int = 5) -> bool:
     return False
 
 
+from sqlalchemy import text
+
 def check_database_health():
     """
     检查数据库健康状态
@@ -158,7 +160,7 @@ def check_database_health():
     """
     try:
         with get_db_session() as session:
-            session.execute("SELECT 1")
+            session.execute(text("SELECT 1"))
         return {
             "status": "healthy",
             "pool": ConnectionPoolMonitor.get_pool_status()
