@@ -25,11 +25,11 @@
 | ⚡ Redis 缓存 | P1 | ✅ **已完成** | 响应缓存，自动降级 |
 | 📝 结构化日志 | P1 | ✅ **已完成** | 请求追踪 + JSON 输出 |
 | 🔍 向量语义检索 | P2 | ✅ **已完成** | ChromaDB 语义搜索 |
-| 📅 定时提醒 | P2 | 📋 **待开发** | 定时任务 + 通知推送 |
+| 📅 定时提醒 | P2 | ✅ **已完成** | APScheduler + 多通知渠道 |
 | 📁 文件上传/知识库 | P2 | 📋 **待开发** | 文档上传 + RAG |
 | 🔄 多 LLM 支持 | P2 | 📋 **待开发** | 支持多个 LLM 切换 |
 
-**当前完成度: 93%**
+**当前完成度: 95%**
 
 ---
 
@@ -174,7 +174,10 @@ personal-assistant/
 - [x] GET /api/tasks - 任务列表（缓存）
 - [x] PATCH /api/tasks/{id} - 更新任务
 - [x] DELETE /api/tasks/{id} - 删除任务
-- [x] GET /api/stats - 用户统计（缓存）
+- [x] GET /api/reminders - 提醒列表
+- [x] POST /api/reminders/{id}/snooze - 推迟提醒
+- [x] POST /api/reminders/{id}/dismiss - 关闭提醒
+- [x] DELETE /api/reminders/{id} - 删除提醒
 
 #### 运维接口
 - [x] GET /health - 健康检查
@@ -190,13 +193,13 @@ personal-assistant/
 ### 📋 待开发功能（7%）
 
 #### P2 - 重要
-1. **定时提醒** ⭐
+- [x] 📅 定时提醒 ⭐ | APScheduler + 多通知渠道 | **已完成** | 2026-03-06
    - 定时任务调度（APScheduler）
-   - 消息推送（邮件/飞书）
-   - 提醒模板管理
+   - 消息推送（应用内/飞书/邮件）
+   - 支持一次性/重复提醒
    - 预计工时: 2-3天
 
-2. **文件上传/知识库**
+2. **文件上传/知识库** ⭐
    - 文档上传（PDF/Word/TXT）
    - 文档解析和向量化
    - RAG 知识检索
