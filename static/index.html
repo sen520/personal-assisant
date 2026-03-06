@@ -6,6 +6,7 @@
     <title>个人助理 - AI Assistant</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="/static/style_reminders.css">
+    <link rel="stylesheet" href="/static/style_models.css">
 </head>
 <body>
     <!-- 登录页面 -->
@@ -99,6 +100,11 @@
                             </div>
                         </div>
                         <div class="chat-input-container">
+                            <div class="chat-toolbar">
+                                <span id="current-model-display">
+                                    <span class="model-tag">加载中...⏳</span>
+                                </span>
+                            </div>
                             <textarea id="chat-input" placeholder="输入消息..." rows="1"></textarea>
                             <button id="send-btn" class="btn-send">➤</button>
                         </div>
@@ -201,7 +207,21 @@
         </div>
     </div>
 
+    <!-- 模型选择弹窗 -->
+    <div id="model-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>🤖 选择 AI 模型</h3>
+            <div id="model-list" class="model-list-container">
+                <p style="text-align:center;color:#999;">加载中...⏳</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('model-modal')">取消</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/app.js"></script>
     <script src="/static/app_reminders.js"></script>
+    <script src="/static/app_models.js"></script>
 </body>
 </html>
