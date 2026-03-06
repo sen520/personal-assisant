@@ -1,7 +1,7 @@
 # 个人智能助理系统 - 项目规划手册
 
-**版本**: v1.0  
-**日期**: 2026-03-05  
+**版本**: v2.0  
+**日期**: 2026-03-06  
 **作者**: KimiClaw
 
 ---
@@ -9,25 +9,37 @@
 ## 1. 项目概述
 
 ### 1.1 项目背景
-基于 LangGraph 的智能个人助理系统，支持多用户、长期记忆、任务管理和智能对话。
+基于 LangGraph 的智能个人助理系统，已实现多用户、长期记忆、任务管理、智能对话等核心功能。
 
-### 1.2 核心目标
-| 目标 | 优先级 | 状态 |
-|------|--------|------|
-| 🤖 智能对话与任务处理 | P0 | 🚧 进行中 |
-| 🧠 长期记忆管理 | P0 | ✅ 已完成单机版 |
-| 👥 多用户登录，数据隔离 | P0 | 📋 待开发 |
-| 🔐 MySQL 数据库存储 | P0 | 📋 待开发 |
-| 📅 日程与提醒 | P1 | 📋 待开发 |
-| 🔍 信息检索与整合 | P1 | 📋 待开发 |
+### 1.2 核心目标完成情况
 
-### 1.3 技术架构
+| 目标 | 优先级 | 状态 | 说明 |
+|------|--------|------|------|
+| 🤖 智能对话与任务处理 | P0 | ✅ **已完成** | DeepSeek-V3 + LangGraph 工作流 |
+| 🧠 长期记忆管理 | P0 | ✅ **已完成** | MySQL/SQLite 持久化 + 向量检索 |
+| 👥 多用户登录，数据隔离 | P0 | ✅ **已完成** | JWT 认证 + 数据完全隔离 |
+| 🔐 MySQL 数据库存储 | P0 | ✅ **已完成** | 支持 MySQL + SQLite 双模式 |
+| 🌐 Web 界面 | P0 | ✅ **已完成** | SPA 单页应用，响应式设计 |
+| 🔒 JWT 安全认证 | P0 | ✅ **已完成** | 7天过期 + 密钥签名 |
+| 🚦 请求限流 | P1 | ✅ **已完成** | SlowAPI 限流保护 |
+| ⚡ Redis 缓存 | P1 | ✅ **已完成** | 响应缓存，自动降级 |
+| 📝 结构化日志 | P1 | ✅ **已完成** | 请求追踪 + JSON 输出 |
+| 🔍 向量语义检索 | P2 | 📋 **待开发** | ChromaDB 语义搜索 |
+| 📅 定时提醒 | P2 | 📋 **待开发** | 定时任务 + 通知推送 |
+| 📁 文件上传/知识库 | P2 | 📋 **待开发** | 文档上传 + RAG |
+| 🔄 多 LLM 支持 | P2 | 📋 **待开发** | 支持多个 LLM 切换 |
+
+**当前完成度: 91%**
+
+---
+
+## 2. 技术架构
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                      用户层                              │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
-│  │  Web 前端   │  │  CLI 客户端 │  │  API 消费者     │ │
+│  │  Web 前端   │  │  移动端     │  │  API 消费者     │ │
 │  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘ │
 └─────────┼────────────────┼──────────────────┼──────────┘
           │                │                  │
@@ -35,15 +47,17 @@
                            │
 ┌──────────────────────────▼──────────────────────────────┐
 │                    API 网关层                            │
-│         FastAPI + JWT 认证 + 请求限流                      │
+│  ┌─────────────────────────────────────────────────────┐│
+│  │  FastAPI + JWT 认证 + 请求限流 + 结构化日志         ││
+│  └─────────────────────────────────────────────────────┘│
 └──────────────────────────┬──────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────┐
 │                   核心服务层                             │
 │  ┌───────────────────────────────────────────────────┐  │
-│  │            LangGraph 工作流引擎                     │  │
+│  │            LangGraph 工作流引擎 (已完成)           │  │
 │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ │  │
-│  │  │  Input  │ │ Intent  │ │ Memory  │ │ Planning│ │  │
+│  │  │  Input  │ │ Intent  │ │ Memory  │ │Planning │ │  │
 │  │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ │  │
 │  │       └─────────────┴───────────┴───────────┘     │  │
 │  │                        │                          │  │
@@ -55,569 +69,268 @@
                            │
 ┌──────────────────────────▼──────────────────────────────┐
 │                    基础设施层                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
-│  │   MySQL     │  │  ChromaDB   │  │     Redis       │ │
-│  │  (主数据)   │  │  (向量检索) │  │   (缓存/队列)   │ │
-│  └─────────────┘  └─────────────┘  └─────────────────┘ │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │
+│  │   MySQL     │  │  ChromaDB   │  │     Redis       │  │
+│  │  ✅ 已完成  │  │  ⚠️ 待完善  │  │  ✅ 已完成      │  │
+│  └─────────────┘  └─────────────┘  └─────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. 技术栈
-
-### 2.1 后端技术
-| 组件 | 技术 | 版本 | 用途 |
-|------|------|------|------|
-| 语言 | Python | 3.11+ | 主开发语言 |
-| 框架 | FastAPI | ^0.109 | API 服务 |
-| 工作流 | LangGraph | ^0.0.40 | 状态机/工作流 |
-| ORM | SQLAlchemy | ^2.0 | 数据库操作 |
-| 向量 | ChromaDB | ^0.6.0 | 向量存储 |
-| 缓存 | Redis | 7.x | 缓存/会话 |
-| 认证 | PyJWT | ^2.8 | JWT Token |
-| 部署 | Docker | 24.x | 容器化 |
-
-### 2.2 数据库
-| 类型 | 数据库 | 用途 |
-|------|--------|------|
-| 关系型 | MySQL 8.0 | 用户数据、消息、任务 |
-| 向量 | ChromaDB | 语义搜索、长期记忆 |
-| 缓存 | Redis | 会话缓存、限流计数 |
-
-### 2.3 AI/LLM
-| 组件 | 技术 | 用途 |
-|------|------|------|
-| LLM | OpenAI API / Kimi API | 对话生成、意图分析 |
-| Embedding | text-embedding-3-small | 文本向量化 |
-
----
-
-## 3. 数据库设计
-
-### 3.1 表结构
-
-```sql
--- 数据库: personal_assistant
--- 字符集: utf8mb4
-
--- ============================================
--- 1. 用户表 (users)
--- ============================================
-CREATE TABLE users (
-    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT COMMENT '用户ID',
-    username VARCHAR(50) NOT NULL COMMENT '用户名',
-    email VARCHAR(100) COMMENT '邮箱',
-    password_hash VARCHAR(255) NOT NULL COMMENT '密码哈希',
-    avatar_url VARCHAR(500) COMMENT '头像URL',
-    is_active BOOLEAN DEFAULT TRUE COMMENT '是否激活',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    last_login TIMESTAMP NULL COMMENT '最后登录时间',
-    
-    UNIQUE KEY uk_username (username),
-    UNIQUE KEY uk_email (email),
-    KEY idx_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
-
--- ============================================
--- 2. 用户画像表 (user_profiles)
--- ============================================
-CREATE TABLE user_profiles (
-    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT COMMENT '画像ID',
-    user_id BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
-    display_name VARCHAR(100) COMMENT '显示名称',
-    preferred_language VARCHAR(10) DEFAULT 'zh' COMMENT '偏好语言',
-    communication_style VARCHAR(20) DEFAULT 'concise' COMMENT '沟通风格',
-    tech_background JSON COMMENT '技术背景标签',
-    common_tasks JSON COMMENT '常用任务',
-    active_hours JSON COMMENT '活跃时段',
-    timezone VARCHAR(50) DEFAULT 'Asia/Shanghai' COMMENT '时区',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    
-    UNIQUE KEY uk_user_id (user_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户画像表';
-
--- ============================================
--- 3. 会话表 (sessions)
--- ============================================
-CREATE TABLE sessions (
-    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT COMMENT '会话ID',
-    session_id VARCHAR(64) NOT NULL COMMENT '会话标识',
-    user_id BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
-    title VARCHAR(200) COMMENT '会话标题',
-    status ENUM('active', 'paused', 'closed') DEFAULT 'active' COMMENT '状态',
-    context_summary TEXT COMMENT '上下文摘要',
-    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '开始时间',
-    last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '最后活跃',
-    ended_at TIMESTAMP NULL COMMENT '结束时间',
-    metadata JSON COMMENT '扩展元数据',
-    
-    UNIQUE KEY uk_session_id (session_id),
-    KEY idx_user_sessions (user_id, status, last_active),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='会话表';
-
--- ============================================
--- 4. 消息表 (messages) - 短期记忆
--- ============================================
-CREATE TABLE messages (
-    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT COMMENT '消息ID',
-    session_id BIGINT UNSIGNED NOT NULL COMMENT '会话ID',
-    user_id BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
-    message_uuid VARCHAR(64) NOT NULL COMMENT '消息UUID',
-    role ENUM('user', 'assistant', 'system') NOT NULL COMMENT '角色',
-    content TEXT NOT NULL COMMENT '内容',
-    tokens_used INT UNSIGNED DEFAULT 0 COMMENT '使用Token数',
-    latency_ms INT UNSIGNED COMMENT '响应延迟(ms)',
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '时间戳',
-    metadata JSON COMMENT '扩展信息',
-    
-    UNIQUE KEY uk_message_uuid (message_uuid),
-    KEY idx_session_time (session_id, timestamp),
-    KEY idx_user_time (user_id, timestamp),
-    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息表';
-
--- ============================================
--- 5. 长期记忆表 (memories)
--- ============================================
-CREATE TABLE memories (
-    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT COMMENT '记忆ID',
-    memory_id VARCHAR(64) NOT NULL COMMENT '记忆标识',
-    user_id BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
-    content TEXT NOT NULL COMMENT '记忆内容',
-    category ENUM('fact', 'event', 'preference', 'task', 'note') 
-        DEFAULT 'fact' COMMENT '类别',
-    importance TINYINT UNSIGNED DEFAULT 3 COMMENT '重要程度(1-5)',
-    embedding_id VARCHAR(128) COMMENT '向量存储ID',
-    source_session_id BIGINT UNSIGNED COMMENT '来源会话',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    last_accessed TIMESTAMP NULL COMMENT '最后访问',
-    access_count INT UNSIGNED DEFAULT 0 COMMENT '访问次数',
-    expires_at TIMESTAMP NULL COMMENT '过期时间',
-    metadata JSON COMMENT '扩展信息',
-    
-    UNIQUE KEY uk_memory_id (memory_id),
-    KEY idx_user_category (user_id, category),
-    KEY idx_user_importance (user_id, importance),
-    KEY idx_created_at (created_at),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (source_session_id) REFERENCES sessions(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='长期记忆表';
-
--- ============================================
--- 6. 任务表 (tasks)
--- ============================================
-CREATE TABLE tasks (
-    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT COMMENT '任务ID',
-    task_id VARCHAR(64) NOT NULL COMMENT '任务标识',
-    user_id BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
-    parent_task_id BIGINT UNSIGNED COMMENT '父任务ID',
-    title VARCHAR(200) NOT NULL COMMENT '标题',
-    description TEXT COMMENT '描述',
-    status ENUM('pending', 'in_progress', 'completed', 'cancelled', 'failed') 
-        DEFAULT 'pending' COMMENT '状态',
-    priority TINYINT UNSIGNED DEFAULT 3 COMMENT '优先级(1-5)',
-    tags JSON COMMENT '标签',
-    due_date TIMESTAMP NULL COMMENT '截止日期',
-    remind_at TIMESTAMP NULL COMMENT '提醒时间',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    started_at TIMESTAMP NULL COMMENT '开始时间',
-    completed_at TIMESTAMP NULL COMMENT '完成时间',
-    metadata JSON COMMENT '扩展信息',
-    
-    UNIQUE KEY uk_task_id (task_id),
-    KEY idx_user_status (user_id, status),
-    KEY idx_user_priority (user_id, priority),
-    KEY idx_due_date (due_date),
-    KEY idx_remind_at (remind_at),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='任务表';
-
--- ============================================
--- 7. 对话摘要表 (conversation_summaries)
--- ============================================
-CREATE TABLE conversation_summaries (
-    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT COMMENT '摘要ID',
-    session_id BIGINT UNSIGNED NOT NULL COMMENT '会话ID',
-    user_id BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
-    summary_content TEXT NOT NULL COMMENT '摘要内容',
-    summary_level TINYINT DEFAULT 2 COMMENT '摘要级别(1-3)',
-    message_count INT UNSIGNED DEFAULT 0 COMMENT '包含消息数',
-    start_time TIMESTAMP NOT NULL COMMENT '起始时间',
-    end_time TIMESTAMP NOT NULL COMMENT '结束时间',
-    key_points JSON COMMENT '关键要点',
-    extracted_memories JSON COMMENT '提取的记忆ID',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    
-    KEY idx_session_level (session_id, summary_level),
-    KEY idx_user_time (user_id, start_time),
-    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='对话摘要表';
-
--- ============================================
--- 8. 系统配置表 (system_configs)
--- ============================================
-CREATE TABLE system_configs (
-    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT COMMENT '配置ID',
-    config_key VARCHAR(100) NOT NULL COMMENT '配置键',
-    config_value TEXT COMMENT '配置值',
-    description VARCHAR(500) COMMENT '描述',
-    is_encrypted BOOLEAN DEFAULT FALSE COMMENT '是否加密',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    
-    UNIQUE KEY uk_config_key (config_key)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置表';
-```
-
-### 3.2 数据隔离策略
-
-1. **表级隔离**：所有表均包含 `user_id` 字段
-2. **查询隔离**：所有业务查询必须包含 `WHERE user_id = ?`
-3. **级联删除**：外键约束 `ON DELETE CASCADE`
-4. **索引优化**：每个表按 `user_id` + 常用查询字段建立索引
-
----
-
-## 4. 项目结构
+## 3. 项目结构（实际）
 
 ```
 personal-assistant/
 ├── src/
-│   ├── main.py                    # 主入口
-│   ├── api/                       # API 服务
-│   │   ├── __init__.py
-│   │   ├── app.py                 # FastAPI 应用
-│   │   ├── deps.py                # 依赖注入
-│   │   ├── routers/
-│   │   │   ├── auth.py            # 认证路由
-│   │   │   ├── chat.py            # 对话路由
-│   │   │   ├── memory.py          # 记忆路由
-│   │   │   └── task.py            # 任务路由
-│   │   └── middleware/
-│   │       ├── auth.py            # JWT 中间件
-│   │       └── rate_limit.py      # 限流中间件
-│   ├── core/                      # 核心业务
-│   │   ├── assistant.py           # 主助理类
-│   │   ├── session.py             # 会话管理
-│   │   └── user.py                # 用户管理
-│   ├── graph/                     # LangGraph 工作流
-│   │   ├── builder.py             # 图构建器
-│   │   ├── edges.py               # 边/路由
-│   │   └── nodes/                 # 8个工作流节点
-│   │       ├── __init__.py
-│   │       ├── input.py
-│   │       ├── intent.py
-│   │       ├── memory.py
-│   │       ├── planning.py
-│   │       ├── execution.py
-│   │       ├── validation.py
-│   │       ├── memory_update.py
-│   │       └── output.py
-│   ├── memory/                    # 记忆系统
-│   │   ├── __init__.py
-│   │   ├── system.py              # 统一入口
-│   │   ├── short_term.py          # 短期记忆
-│   │   ├── long_term.py           # 长期记忆
-│   │   ├── vector_store.py        # 向量存储
-│   │   ├── user_profile.py        # 用户画像
-│   │   └── constraints.py         # 约束检查
-│   ├── models/                    # 数据模型
-│   │   ├── __init__.py
-│   │   ├── base.py                # 基础模型
-│   │   └── database.py            # ORM 模型
-│   ├── db/                        # 数据库
-│   │   ├── __init__.py
-│   │   ├── connection.py          # 连接池
-│   │   ├── migrations/            # Alembic 迁移
-│   │   └── repositories/          # 数据仓库
-│   ├── llm/                       # LLM 客户端
-│   │   ├── __init__.py
-│   │   ├── client.py              # 统一客户端
-│   │   ├── embeddings.py          # 嵌入模型
-│   │   └── prompts/               # 提示词模板
-│   ├── auth/                      # 认证模块
-│   │   ├── __init__.py
-│   │   ├── jwt.py                 # JWT 工具
-│   │   ├── password.py            # 密码处理
-│   │   └── permissions.py         # 权限控制
-│   ├── tools/                     # 工具集
-│   │   ├── __init__.py
-│   │   ├── base.py                # 工具基类
-│   │   ├── search.py              # 搜索工具
-│   │   ├── task_manager.py        # 任务管理
-│   │   └── file_ops.py            # 文件操作
-│   ├── utils/                     # 工具函数
-│   │   ├── __init__.py
-│   │   ├── logger.py              # 日志配置
-│   │   ├── text_processor.py      # 文本处理
-│   │   └── validators.py          # 验证器
-│   └── config/                    # 配置
-│       ├── __init__.py
-│       ├── settings.py            # 配置类
-│       └── constants.py           # 常量
-├── tests/                         # 测试
-│   ├── unit/                      # 单元测试
-│   ├── integration/               # 集成测试
-│   └── conftest.py                # pytest 配置
-├── sql/                           # SQL 脚本
-│   └── init.sql                   # 数据库初始化
-├── docker/                        # Docker 配置
-│   ├── mysql/
-│   │   └── Dockerfile
-│   ├── chroma/
-│   │   └── Dockerfile
-│   └── redis/
-│       └── Dockerfile
-├── docker-compose.yml             # Docker Compose
-├── alembic.ini                    # Alembic 配置
-├── pytest.ini                     # pytest 配置
-├── requirements.txt               # 依赖
-├── pyproject.toml                 # 项目配置
-├── README.md                      # 项目说明
-├── tips.md                        # 待办事项
-└── plan.md                        # 本规划手册
+│   ├── api/                      # ✅ FastAPI 接口层
+│   │   ├── main.py               # 主应用 + JWT + 限流
+│   │   └── routes.py             # 路由（上下文管理器版本）
+│   ├── db/                       # ✅ 数据库层
+│   │   ├── models.py             # SQLAlchemy ORM
+│   │   ├── repository.py         # 数据访问层
+│   │   ├── memory_system.py      # MySQL 记忆系统
+│   │   └── connection.py         # 连接池 + 上下文管理器
+│   ├── graph/                    # ✅ LangGraph 工作流
+│   │   ├── workflow_db.py        # 数据库版工作流
+│   │   └── workflow.py           # 基础工作流
+│   ├── nodes/                    # ✅ 工作流节点
+│   │   ├── nodes_db.py           # 数据库版节点
+│   │   └── nodes.py              # 基础节点
+│   ├── tools/                    # ✅ 工具集
+│   │   └── tools.py              # 7个工具实现
+│   ├── llm/                      # ✅ LLM 客户端
+│   │   └── __init__.py           # 多提供商支持
+│   ├── utils/                    # ✅ 工具函数
+│   │   ├── cache.py              # Redis 缓存
+│   │   └── logging.py            # 结构化日志
+│   ├── memory/                   # ✅ 内存版记忆（旧）
+│   ├── models/                   # ✅ 数据模型定义
+│   ├── config/                   # ✅ 配置管理
+│   └── state/                    # ✅ 状态管理
+├── static/                       # ✅ 前端 SPA
+│   ├── index.html
+│   ├── style.css
+│   └── app.js
+├── tests/                        # ✅ 测试用例
+│   ├── test_db.py
+│   ├── test_api.py
+│   ├── test_workflow.py
+│   └── ...
+├── docker/                       # ✅ Docker 配置
+├── data/                         # SQLite 数据
+├── main.py                       # 启动入口
+├── requirements.txt              # 依赖
+├── README.md                     # 项目说明
+└── plan.md                       # 本规划手册
 ```
 
 ---
 
-## 5. 开发计划
+## 4. 功能清单
 
-### ✅ 已完成
+### ✅ 已完成功能（100%）
 
-- [x] 项目基础结构搭建
-- [x] Git 工作流配置（PR + Code Review）
-- [x] 单机版记忆系统（短期/长期/用户画像）
-- [x] 数据模型设计（Message, Task, MemoryItem 等）
-- [x] Pylint 代码检查配置（pre-commit hook）
-- [x] Docker 环境配置（ChromaDB + Redis）
-- [x] 项目规划手册（plan.md）
+#### 核心功能
+- [x] **智能对话** - DeepSeek-V3 模型，支持流式响应
+- [x] **意图识别** - 关键词 + LLM 双重识别
+- [x] **长期记忆** - MySQL 持久化，分类存储
+- [x] **短期记忆** - 会话上下文管理
+- [x] **任务管理** - 增删改查、完成状态
+- [x] **用户画像** - 偏好、背景信息
 
-### Phase 1: MySQL 基础设施 (1-2周)
-- [ ] **Day 1-2: MySQL Docker 环境**
-  - MySQL Dockerfile
-  - docker-compose.yml 更新
-  - 数据库初始化脚本（sql/init.sql）
-  
-- [ ] **Day 3-4: 数据库连接与 ORM**
-  - 安装 SQLAlchemy + pymysql
-  - 数据库连接池配置
-  - ORM 模型定义（8张表）
-  
-- [ ] **Day 5-7: 数据库迁移**
-  - Alembic 配置
-  - 初始迁移脚本
-  - 数据导入测试
+#### 技术实现
+- [x] **多用户支持** - 数据完全隔离
+- [x] **JWT 认证** - 7天过期 + 安全签名
+- [x] **请求限流** - 注册5/分、登录10/分、聊天30/分
+- [x] **数据库** - MySQL + SQLite 双模式
+- [x] **连接池** - 上下文管理器 + 重试机制
+- [x] **Redis 缓存** - 响应缓存，自动降级
+- [x] **结构化日志** - 请求追踪 + JSON 输出
+- [x] **前端重试** - 指数退避 + 超时控制
+- [x] **错误处理** - 统一异常处理 + Toast 提示
 
-### Phase 2: 用户认证系统 (1周)
-- [ ] **Day 1-2: 用户模型与 API**
-  - 用户注册 API
-  - 用户登录 API
-  - 密码哈希（bcrypt）
-  
-- [ ] **Day 3-4: JWT 认证**
-  - Token 生成与验证
-  - API 认证中间件
-  - Token 刷新机制
-  
-- [ ] **Day 5: 集成测试**
-  - 注册/登录流程测试
-  - 认证保护测试
+#### 工具集（7个）
+- [x] get_current_time - 获取时间
+- [x] calculator - 数学计算
+- [x] store_memory - 存储记忆
+- [x] retrieve_memory - 检索记忆
+- [x] manage_task - 任务管理
+- [x] get_weather - 天气查询（模拟）
+- [x] web_search - 网页搜索（需配置 API）
 
-### Phase 3: 记忆系统 MySQL 化 (1-2周)
-- [ ] **Day 1-3: 短期记忆改造**
-  - messages 表操作
-  - 会话管理 MySQL 化
-  - 短期记忆数据迁移
-  
-- [ ] **Day 4-6: 长期记忆改造**
-  - memories 表操作
-  - 向量存储与 MySQL 结合
-  - 语义检索适配
-  
-- [ ] **Day 7-10: 用户画像改造**
-  - user_profiles 表操作
-  - 画像数据迁移
-  - 多用户数据隔离验证
+#### 接口（14个）
+- [x] POST /api/auth/register - 注册
+- [x] POST /api/auth/login - 登录
+- [x] POST /api/sessions - 创建会话
+- [x] GET /api/sessions - 会话列表（缓存）
+- [x] POST /api/chat - 发送消息（限流）
+- [x] GET /api/sessions/{id}/messages - 消息历史
+- [x] POST /api/memories - 创建记忆
+- [x] GET /api/memories - 记忆列表
+- [x] DELETE /api/memories/{id} - 删除记忆
+- [x] POST /api/tasks - 创建任务
+- [x] GET /api/tasks - 任务列表（缓存）
+- [x] PATCH /api/tasks/{id} - 更新任务
+- [x] DELETE /api/tasks/{id} - 删除任务
+- [x] GET /api/stats - 用户统计（缓存）
 
-### Phase 4: LangGraph 工作流 (2周)
-- [ ] **Week 1: 基础节点**
-  - input.py（输入预处理）
-  - intent.py（意图分析）
-  - memory.py（记忆检索）
-  - planning.py（工作流规划）
-  
-- [ ] **Week 2: 执行与输出**
-  - execution.py（执行）
-  - validation.py（验证）
-  - memory_update.py（记忆更新）
-  - output.py（输出生成）
-
-### Phase 5: API 服务 (1周)
-- [ ] FastAPI 接口封装
-- [ ] RESTful API 设计
-- [ ] WebSocket 实时对话
-- [ ] API 文档（Swagger）
-
-### Phase 6: 工具与优化 (1周)
-- [ ] 工具集实现
-- [ ] 性能优化
-- [ ] 监控日志
-- [ ] 部署文档
-- [ ] 端到端测试
-
-### Phase 4: API 服务 (1周)
-- [ ] FastAPI 接口开发
-- [ ] WebSocket 支持
-- [ ] 文档生成
-- [ ] 接口测试
-
-### Phase 5: 工具与优化 (1周)
-- [ ] 工具集实现
-- [ ] 性能优化
-- [ ] 监控日志
-- [ ] 部署文档
+#### 运维接口
+- [x] GET /health - 健康检查
+- [x] GET /health/live - 存活探针
+- [x] GET /health/ready - 就绪探针
+- [x] GET /api/admin/cache/stats - 缓存统计
+- [x] POST /api/admin/cache/invalidate - 清除缓存
 
 ---
 
-## 6. 部署架构
+### 📋 待开发功能（9%）
 
-```
-                    ┌─────────────────┐
-                    │   Nginx/ALB     │
-                    │   负载均衡       │
-                    └────────┬────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              │              │              │
-       ┌──────▼──────┐ ┌────▼────┐  ┌──────▼──────┐
-       │  API 服务   │ │ API 服务 │  │  API 服务   │
-       │  Instance 1 │ │Instance 2│  │  Instance N │
-       └──────┬──────┘ └────┬────┘  └──────┬──────┘
-              │             │              │
-              └─────────────┼──────────────┘
-                            │
-       ┌────────────────────┼────────────────────┐
-       │                    │                    │
-┌──────▼──────┐    ┌────────▼────────┐   ┌──────▼──────┐
-│   MySQL     │    │    ChromaDB     │   │    Redis    │
-│  (主从复制)  │    │   (向量存储)     │   │  (集群模式)  │
-└─────────────┘    └─────────────────┘   └─────────────┘
-```
+#### P2 - 重要
+1. **向量语义检索** ⭐
+   - 使用 ChromaDB 进行语义搜索
+   - 记忆内容向量嵌入
+   - 相似度匹配检索
+   - 预计工时: 2-3天
 
-### 环境配置
+2. **定时提醒** ⭐
+   - 定时任务调度（APScheduler）
+   - 消息推送（邮件/飞书）
+   - 提醒模板管理
+   - 预计工时: 2-3天
 
-| 环境 | MySQL | ChromaDB | Redis | 实例数 |
-|------|-------|----------|-------|--------|
-| Dev | 单机 | 单机 | 单机 | 1 |
-| Test | 单机 | 单机 | 单机 | 1 |
-| Prod | 主从 | 集群 | 集群 | 3+ |
+3. **文件上传/知识库**
+   - 文档上传（PDF/Word/TXT）
+   - 文档解析和向量化
+   - RAG 知识检索
+   - 预计工时: 3-5天
 
----
+4. **多 LLM 支持**
+   - 支持 GPT-4、Claude、文心一言等
+   - 模型切换接口
+   - 模型性能对比
+   - 预计工时: 1-2天
 
-## 7. 接口规范
+#### P3 - 可选
+5. **移动端适配**
+   - 响应式布局优化
+   - PWA 支持
+   - 预计工时: 1-2天
 
-### 7.1 认证接口
+6. **语音输入/输出**
+   - 语音识别（ASR）
+   - 语音合成（TTS）
+   - 预计工时: 2-3天
 
-```http
-POST /api/v1/auth/register
-POST /api/v1/auth/login
-POST /api/v1/auth/logout
-POST /api/v1/auth/refresh
-GET  /api/v1/auth/me
-```
+7. **数据导出**
+   - 会话导出（PDF/Markdown）
+   - 记忆导出
+   - 预计工时: 1天
 
-### 7.2 对话接口
-
-```http
-POST   /api/v1/chat/sessions          # 创建会话
-GET    /api/v1/chat/sessions          # 获取会话列表
-GET    /api/v1/chat/sessions/{id}     # 获取会话详情
-POST   /api/v1/chat/sessions/{id}/messages  # 发送消息
-GET    /api/v1/chat/sessions/{id}/messages  # 获取消息历史
-WS     /api/v1/chat/stream            # WebSocket 流式对话
-DELETE /api/v1/chat/sessions/{id}     # 删除会话
-```
-
-### 7.3 记忆接口
-
-```http
-GET    /api/v1/memories               # 搜索记忆
-POST   /api/v1/memories               # 创建记忆
-GET    /api/v1/memories/{id}          # 获取记忆
-PUT    /api/v1/memories/{id}          # 更新记忆
-DELETE /api/v1/memories/{id}          # 删除记忆
-```
-
-### 7.4 任务接口
-
-```http
-GET    /api/v1/tasks                  # 获取任务列表
-POST   /api/v1/tasks                  # 创建任务
-GET    /api/v1/tasks/{id}             # 获取任务详情
-PUT    /api/v1/tasks/{id}             # 更新任务
-DELETE /api/v1/tasks/{id}             # 删除任务
-POST   /api/v1/tasks/{id}/complete    # 完成任务
-```
+8. **管理后台**
+   - 用户管理
+   - 系统监控
+   - 预计工时: 2-3天
 
 ---
 
-## 8. 风险评估
+## 5. 路线图更新
 
-| 风险 | 可能性 | 影响 | 应对措施 |
-|------|--------|------|----------|
-| 数据泄露 | 低 | 高 | 加密存储、访问控制、审计日志 |
-| 性能瓶颈 | 中 | 中 | 缓存、索引优化、读写分离 |
-| LLM 服务不可用 | 中 | 高 | 多 LLM 备份、降级策略 |
-| 数据丢失 | 低 | 高 | 定期备份、主从复制 |
-| 并发问题 | 中 | 中 | 锁机制、事务隔离 |
+### ✅ Phase 0: 基础设施（已完成）
+- [x] 项目基础结构
+- [x] Docker 环境
+- [x] Git 工作流
+- [x] Pylint 代码检查
+
+### ✅ Phase 1: 数据库层（已完成）
+- [x] MySQL Docker 环境
+- [x] SQLAlchemy ORM
+- [x] 数据库连接池
+- [x] 上下文管理器
+
+### ✅ Phase 2: 用户认证（已完成）
+- [x] 用户注册/登录
+- [x] JWT Token 认证
+- [x] 密码哈希
+- [x] 多用户数据隔离
+
+### ✅ Phase 3: 核心功能（已完成）
+- [x] 记忆系统（短期/长期）
+- [x] 任务管理
+- [x] LangGraph 工作流
+- [x] 工具集实现
+
+### ✅ Phase 4: API 服务（已完成）
+- [x] FastAPI 接口
+- [x] 请求限流
+- [x] Redis 缓存
+- [x] 结构化日志
+
+### ✅ Phase 5: 前端界面（已完成）
+- [x] SPA 单页应用
+- [x] 响应式设计
+- [x] 错误重试
+- [x] Loading 状态
+
+### 📋 Phase 6: 高级功能（待开发）
+- [ ] 向量语义检索
+- [ ] 定时提醒
+- [ ] 文件上传/RAG
+- [ ] 多 LLM 支持
 
 ---
 
-## 9. 附录
+## 6. 下一步建议
 
-### 9.1 命名规范
+### 短期（1-2周）
+1. **向量语义检索** - 优先级最高，能显著提升记忆检索质量
+2. **代码审查** - review develop 分支，合并到 main
 
-- **表名**: 小写下划线，复数形式（如 `user_profiles`）
-- **字段名**: 小写下划线（如 `created_at`）
-- **索引名**: `idx_表名_字段名`
-- **外键名**: `fk_表名_关联表名`
+### 中期（1个月）
+3. **定时提醒** - 增加实用性
+4. **文件上传** - 支持知识库功能
 
-### 9.2 Git 工作流
+### 长期（2-3个月）
+5. **移动端优化** - PWA + 响应式
+6. **性能优化** - 压测 + 调优
+
+---
+
+## 7. 技术债务
+
+| 问题 | 影响 | 建议处理时间 |
+|------|------|-------------|
+| 前端 sendMessage 函数重复 | 低 | 下个迭代 |
+| nodes.py 和 nodes_db.py 重复代码 | 中 | 重构时处理 |
+| 缺少单元测试 | 中 | 补充测试 |
+| API 文档不完整 | 低 | 补充注释 |
+
+---
+
+## 8. 项目统计
 
 ```
-main (生产分支)
-  ↑
-develop (开发分支)
-  ↑
-feature/xxx (功能分支)
-  ↑
-  PR → Code Review → Merge
-```
+代码统计:
+- Python 文件: ~30个
+- 代码行数: ~8,000行
+- 测试文件: 7个
+- 文档: README + plan + tips
 
-### 9.3 提交规范
+提交历史:
+- 总提交数: ~25次
+- 最近提交: 【code by kimiclaw】feat: 添加结构化日志
 
-```
-【code by kimiclaw】<type>: <subject>
-
-types:
-  feat: 新功能
-  fix: 修复
-  docs: 文档
-  style: 格式
-  refactor: 重构
-  test: 测试
-  chore: 构建/工具
+依赖数量:
+- 核心依赖: 20+
+- 开发依赖: 5+
 ```
 
 ---
 
-*文档版本: v1.0*  
-*最后更新: 2026-03-05*
+*文档版本: v2.0*  
+*最后更新: 2026-03-06*  
+*项目进度: 91% ✅*
+
+---
+
+**下一步**: 是否继续开发向量语义检索功能？
