@@ -220,12 +220,14 @@ async def lifespan(app: FastAPI):
     from ..db.connection import init_database_with_retry
     from ..utils.cache import init_cache
     from ..utils.vector_store import init_vector_store
+    from ..utils.scheduler import init_scheduler
     
     logger.info("应用启动中...")
     
     init_database_with_retry()
     init_cache()
     init_vector_store()
+    init_scheduler()
     
     logger.info("✅ 应用启动完成")
     
@@ -233,6 +235,8 @@ async def lifespan(app: FastAPI):
     
     # 关闭时清理
     logger.info("应用关闭中...")
+    from ..utils.scheduler import reminder_scheduler
+    reminder_scheduler.shutdown()
     RequestContext.clear()
     logger.info("✅ 应用已关闭")
 
@@ -695,6 +699,177 @@ def delete_task(task_id: str, user_id: str = Depends(verify_token)):
         raise HTTPException(status_code=404, detail="Task not found")
     finally:
         memory.close()
+
+
+# ============================================================================
+# 提醒接口
+# ============================================================================
+
+class ReminderCreate(BaseModel):
+    """创建提醒请求"""
+    title: str = Field(..., min_length=1, max_length=200, description="提醒标题")
+    description: str = Field(default="", description="提醒描述")
+    remind_at: str = Field(..., description="提醒时间 (ISO 格式)")
+    timezone: str = Field(default="Asia/Shanghai", description="时区")
+    is_recurring: bool = Field(default=False, description="是否重复")
+    recurrence_rule: dict = Field(default={}, description="重复规则")
+    notify_channels: list = Field(default=["in_app"], description="通知渠道")
+
+
+class ReminderResponse(BaseModel):
+    """提醒响应"""
+    id: str
+    title: str
+    description: str
+    remind_at: str
+    status: str
+    notify_channels: list
+    created_at: str
+
+
+@app.post("/api/reminders", response_model=ReminderResponse)
+def create_reminder(
+    reminder_data: ReminderCreate,
+    user_id: str = Depends(verify_token)
+):
+    """创建提醒"""
+    from datetime import datetime
+    from ..db.models import db_manager
+    from ..db.repository import ReminderRepository
+    
+    session = db_manager.get_session()
+    try:
+        repo = ReminderRepository(session)
+        
+        # 解析时间
+        try:
+            remind_at = datetime.fromisoformat(reminder_data.remind_at.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid remind_at format")
+        
+        # 检查时间是否在将来
+        if remind_at < datetime.now():
+            raise HTTPException(status_code=400, detail="提醒时间必须在将来")
+        
+        reminder = repo.create(
+            user_id=user_id,
+            title=reminder_data.title,
+            description=reminder_data.description,
+            remind_at=remind_at,
+            timezone=reminder_data.timezone,
+            is_recurring=reminder_data.is_recurring,
+            recurrence_rule=reminder_data.recurrence_rule,
+            notify_channels=reminder_data.notify_channels
+        )
+        
+        # 调度提醒
+        from ..utils.scheduler import reminder_scheduler
+        reminder_scheduler.schedule_one_time_reminder(reminder.id, remind_at)
+        
+        return ReminderResponse(
+            id=reminder.id,
+            title=reminder.title,
+            description=reminder.description or "",
+            remind_at=reminder.remind_at.isoformat(),
+            status=reminder.status,
+            notify_channels=reminder.notify_channels,
+            created_at=reminder.created_at.isoformat()
+        )
+    finally:
+        session.close()
+
+
+@app.get("/api/reminders")
+def list_reminders(
+    user_id: str = Depends(verify_token),
+    status: Optional[str] = None,
+    upcoming_only: bool = True,
+    limit: int = 100
+):
+    """获取提醒列表"""
+    from ..db.models import db_manager
+    from ..db.repository import ReminderRepository
+    
+    session = db_manager.get_session()
+    try:
+        repo = ReminderRepository(session)
+        reminders = repo.list_by_user(user_id, status, upcoming_only, limit)
+        
+        return {
+            "reminders": [
+                ReminderResponse(
+                    id=r.id,
+                    title=r.title,
+                    description=r.description or "",
+                    remind_at=r.remind_at.isoformat(),
+                    status=r.status,
+                    notify_channels=r.notify_channels,
+                    created_at=r.created_at.isoformat()
+                )
+                for r in reminders
+            ],
+            "total": len(reminders)
+        }
+    finally:
+        session.close()
+
+
+@app.post("/api/reminders/{reminder_id}/snooze")
+def snooze_reminder(
+    reminder_id: str,
+    minutes: int = 10,
+    user_id: str = Depends(verify_token)
+):
+    """推迟提醒"""
+    from ..db.models import db_manager
+    from ..db.repository import ReminderRepository
+    
+    session = db_manager.get_session()
+    try:
+        repo = ReminderRepository(session)
+        success = repo.snooze(reminder_id, user_id, minutes)
+        
+        if success:
+            return {"success": True, "message": f"Reminder snoozed for {minutes} minutes"}
+        raise HTTPException(status_code=404, detail="Reminder not found")
+    finally:
+        session.close()
+
+
+@app.post("/api/reminders/{reminder_id}/dismiss")
+def dismiss_reminder(reminder_id: str, user_id: str = Depends(verify_token)):
+    """关闭提醒"""
+    from ..db.models import db_manager
+    from ..db.repository import ReminderRepository
+    
+    session = db_manager.get_session()
+    try:
+        repo = ReminderRepository(session)
+        success = repo.dismiss(reminder_id, user_id)
+        
+        if success:
+            return {"success": True, "message": "Reminder dismissed"}
+        raise HTTPException(status_code=404, detail="Reminder not found")
+    finally:
+        session.close()
+
+
+@app.delete("/api/reminders/{reminder_id}")
+def delete_reminder(reminder_id: str, user_id: str = Depends(verify_token)):
+    """删除提醒"""
+    from ..db.models import db_manager
+    from ..db.repository import ReminderRepository
+    
+    session = db_manager.get_session()
+    try:
+        repo = ReminderRepository(session)
+        success = repo.delete(reminder_id, user_id)
+        
+        if success:
+            return {"success": True, "message": "Reminder deleted"}
+        raise HTTPException(status_code=404, detail="Reminder not found")
+    finally:
+        session.close()
 
 
 # ============================================================================

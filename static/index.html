@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>个人助理 - AI Assistant</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style_reminders.css">
 </head>
 <body>
     <!-- 登录页面 -->
@@ -55,6 +56,9 @@
                     </a>
                     <a href="#" class="nav-item" data-page="tasks">
                         <span>📋</span> 任务
+                    </a>
+                    <a href="#" class="nav-item" data-page="reminders">
+                        <span>⏰</span> 提醒
                     </a>
                     <a href="#" class="nav-item" data-page="memories">
                         <span>🧠</span> 记忆
@@ -123,6 +127,17 @@
                     </div>
                 </div>
 
+                <!-- 提醒页面 -->
+                <div id="reminders-page" class="content-page">
+                    <div class="page-header">
+                        <h2>⏰ 定时提醒</h2>
+                        <button id="new-reminder-btn" class="btn-primary">+ 新建提醒</button>
+                    </div>
+                    <div id="reminders-list" class="reminders-list">
+                        <!-- 提醒列表动态加载 -->
+                    </div>
+                </div>
+
                 <!-- 统计页面 -->
                 <div id="stats-page" class="content-page">
                     <div class="page-header">
@@ -172,6 +187,21 @@
         </div>
     </div>
 
+    <!-- 新建提醒弹窗 -->
+    <div id="reminder-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>新建提醒</h3>
+            <input type="text" id="reminder-title" placeholder="提醒标题">
+            <textarea id="reminder-desc" placeholder="提醒内容（可选）"></textarea>
+            <input type="datetime-local" id="reminder-datetime" placeholder="提醒时间">
+            <div class="modal-actions">
+                <button class="btn-cancel">取消</button>
+                <button class="btn-confirm">创建</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/app.js"></script>
+    <script src="/static/app_reminders.js"></script>
 </body>
 </html>

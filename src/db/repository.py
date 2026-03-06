@@ -304,3 +304,120 @@ class TaskRepository:
             self.session.commit()
             return True
         return False
+
+
+class ReminderRepository:
+    """提醒数据访问"""
+    
+    def __init__(self, session: Session):
+        self.session = session
+    
+    def create(self, user_id: str, title: str, description: str = None,
+               remind_at = None, timezone: str = "Asia/Shanghai",
+               is_recurring: bool = False, recurrence_rule: dict = None,
+               notify_channels: list = None, task_id: str = None) -> Reminder:
+        """创建提醒"""
+        import uuid
+        from .models import Reminder
+        
+        reminder = Reminder(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            title=title,
+            description=description,
+            remind_at=remind_at,
+            timezone=timezone,
+            is_recurring=1 if is_recurring else 0,
+            recurrence_rule=recurrence_rule or {},
+            notify_channels=notify_channels or ["in_app"],
+            task_id=task_id
+        )
+        self.session.add(reminder)
+        self.session.commit()
+        self.session.refresh(reminder)
+        return reminder
+    
+    def get_by_id(self, reminder_id: str, user_id: str) -> Optional[Reminder]:
+        """获取提醒（带用户权限检查）"""
+        from .models import Reminder
+        return self.session.query(Reminder).filter(
+            Reminder.id == reminder_id,
+            Reminder.user_id == user_id
+        ).first()
+    
+    def list_by_user(self, user_id: str, status: str = None, 
+                     upcoming_only: bool = False, limit: int = 100) -> List[Reminder]:
+        """获取用户的提醒列表"""
+        from .models import Reminder
+        from datetime import datetime
+        
+        query = self.session.query(Reminder).filter(Reminder.user_id == user_id)
+        
+        if status:
+            query = query.filter(Reminder.status == status)
+        
+        if upcoming_only:
+            query = query.filter(Reminder.remind_at >= datetime.now())
+        
+        return query.order_by(Reminder.remind_at.asc()).limit(limit).all()
+    
+    def get_pending_reminders(self, before_time: datetime) -> List[Reminder]:
+        """获取待发送的提醒（用于调度器）"""
+        from .models import Reminder
+        return self.session.query(Reminder).filter(
+            Reminder.status == "pending",
+            Reminder.remind_at <= before_time
+        ).order_by(Reminder.remind_at.asc()).all()
+    
+    def mark_as_sent(self, reminder_id: str):
+        """标记提醒为已发送"""
+        reminder = self.session.query(Reminder).filter(Reminder.id == reminder_id).first()
+        if reminder:
+            reminder.status = "sent"
+            reminder.sent_at = datetime.now()
+            self.session.commit()
+    
+    def snooze(self, reminder_id: str, user_id: str, snooze_minutes: int = 10) -> bool:
+        """推迟提醒"""
+        from datetime import datetime, timedelta
+        
+        reminder = self.get_by_id(reminder_id, user_id)
+        if not reminder:
+            return False
+        
+        reminder.remind_at = datetime.now() + timedelta(minutes=snooze_minutes)
+        reminder.status = "pending"
+        self.session.commit()
+        return True
+    
+    def dismiss(self, reminder_id: str, user_id: str) -> bool:
+        """关闭提醒"""
+        reminder = self.get_by_id(reminder_id, user_id)
+        if not reminder:
+            return False
+        
+        reminder.status = "dismissed"
+        self.session.commit()
+        return True
+    
+    def delete(self, reminder_id: str, user_id: str) -> bool:
+        """删除提醒"""
+        reminder = self.get_by_id(reminder_id, user_id)
+        if reminder:
+            self.session.delete(reminder)
+            self.session.commit()
+            return True
+        return False
+    
+    def update(self, reminder_id: str, user_id: str, **kwargs) -> bool:
+        """更新提醒"""
+        reminder = self.get_by_id(reminder_id, user_id)
+        if not reminder:
+            return False
+        
+        for key, value in kwargs.items():
+            if hasattr(reminder, key):
+                setattr(reminder, key, value)
+        
+        self.session.commit()
+        return True

@@ -581,6 +581,19 @@ async function loadStats() {
                 <div class="stat-label">待办任务</div>
             </div>
         `;
+        
+        // 加载提醒数量
+        try {
+            const reminderData = await apiRequest('/reminders?limit=1');
+            container.innerHTML += `
+                <div class="stat-card">
+                    <div class="stat-value">${reminderData.total}</div>
+                    <div class="stat-label">提醒设置</div>
+                </div>
+            `;
+        } catch (e) {
+            // 忽略提醒加载错误
+        }
     } catch (error) {
         console.error('加载统计失败:', error);
     }

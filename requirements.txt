@@ -40,3 +40,5 @@ structlog>=24.0.0
 slowapi>=0.1.9
 redis>=5.0.0
 sentence-transformers>=2.5.0
+apscheduler>=3.10.0
+pytz>=2024.1

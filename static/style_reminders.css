@@ -1,0 +1,112 @@
+
+
+/* 提醒页面样式 */
+.reminders-list {
+    padding: 20px;
+    max-width: 800px;
+}
+
+.reminder-item {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-left: 4px solid var(--primary-color);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.reminder-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.reminder-item.sent {
+    border-left-color: #10b981;
+    opacity: 0.7;
+}
+
+.reminder-item.dismissed {
+    border-left-color: #9ca3af;
+    opacity: 0.5;
+}
+
+.reminder-item.overdue {
+    border-left-color: #ef4444;
+    background: #fef2f2;
+}
+
+.reminder-content {
+    flex: 1;
+}
+
+.reminder-title {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text-color);
+    margin-bottom: 4px;
+}
+
+.reminder-desc {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.reminder-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+    align-items: center;
+}
+
+.reminder-time {
+    color: #666;
+}
+
+.reminder-time.overdue {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.reminder-status {
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #f3f4f6;
+    color: #666;
+    font-size: 12px;
+}
+
+.reminder-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.reminder-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    font-size: 16px;
+    opacity: 0.7;
+    transition: opacity 0.2s, background 0.2s;
+}
+
+.reminder-actions button:hover {
+    opacity: 1;
+    background: #f3f4f6;
+}
+
+/* datetime-local 输入框样式 */
+#reminder-datetime {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+}

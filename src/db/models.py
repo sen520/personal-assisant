@@ -206,6 +206,52 @@ class Task(Base):
     )
 
 
+class Reminder(Base):
+    """提醒表"""
+    __tablename__ = "reminders"
+    
+    id = Column(String(36), primary_key=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    
+    # 提醒时间
+    remind_at = Column(DateTime, nullable=False, index=True)
+    timezone = Column(String(50), default="Asia/Shanghai")
+    
+    # 重复设置
+    is_recurring = Column(Integer, default=0)  # 0=一次性, 1=重复
+    recurrence_rule = Column(JSON, default=dict)  # 重复规则: {"type": "daily|weekly|monthly", "interval": 1}
+    
+    # 状态
+    status = Column(String(20), default="pending")  # pending, sent, dismissed, snoozed
+    
+    # 通知渠道
+    notify_channels = Column(JSON, default=list)  # ["in_app", "email", "feishu"]
+    
+    # 关联任务
+    task_id = Column(String(36), ForeignKey("tasks.id"), nullable=True)
+    
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    sent_at = Column(DateTime, nullable=True)
+    
+    # 关联
+    user = relationship("User", back_populates="reminders")
+    task = relationship("Task")
+    
+    __table_args__ = (
+        Index('idx_reminder_user_id', 'user_id'),
+        Index('idx_reminder_status', 'status'),
+        Index('idx_reminder_remind_at', 'remind_at'),
+        Index('idx_reminder_user_status_time', 'user_id', 'status', 'remind_at'),
+    )
+
+
+# 添加关系到 User 类
+User.reminders = relationship("Reminder", back_populates="user")
+
+
 # ============================================================================
 # 数据库连接管理
 # ============================================================================
