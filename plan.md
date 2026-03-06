@@ -27,7 +27,7 @@
 | 🔍 向量语义检索 | P2 | ✅ **已完成** | ChromaDB 语义搜索 |
 | 📅 定时提醒 | P2 | ✅ **已完成** | APScheduler + 多通知渠道 |
 | 📁 文件上传/知识库 | P2 | ✅ **已完成** | RAG 文档检索 |
-| 🔄 多 LLM 支持 | P2 | 📋 **待开发** | 支持多个 LLM 切换 |
+| 🔄 多 LLM 支持 | P2 | ✅ **已完成** | 17+ 模型切换 |
 
 **当前完成度: 97%**
 
@@ -129,7 +129,7 @@ personal-assistant/
 
 ## 4. 功能清单
 
-### ✅ 已完成功能（100%）
+### ✅ 已完成功能（20个）
 
 #### 核心功能
 - [x] **智能对话** - DeepSeek-V3 模型，支持流式响应
@@ -159,7 +159,7 @@ personal-assistant/
 - [x] get_weather - 天气查询（模拟）
 - [x] web_search - 网页搜索（需配置 API）
 
-#### 接口（14个）
+#### 接口（20个）
 - [x] POST /api/auth/register - 注册
 - [x] POST /api/auth/login - 登录
 - [x] POST /api/sessions - 创建会话
@@ -178,6 +178,9 @@ personal-assistant/
 - [x] POST /api/reminders/{id}/snooze - 推迟提醒
 - [x] POST /api/reminders/{id}/dismiss - 关闭提醒
 - [x] DELETE /api/reminders/{id} - 删除提醒
+- [x] GET /api/models - 模型列表
+- [x] POST /api/models/select - 切换模型
+- [x] POST /api/models/compare - 模型对比
 
 #### 运维接口
 - [x] GET /health - 健康检查
@@ -205,29 +208,33 @@ personal-assistant/
    - RAG 知识检索
    - 预计工时: 3-5天
 
-2. **多 LLM 支持** ⭐
-   - 支持 GPT-4、Claude、文心一言等
+- [x] 🔄 多 LLM 支持 ⭐ | 17+ 模型切换 | **已完成** | 2026-03-06
+   - 支持 GPT-4、Claude、Kimi、DeepSeek、通义千问等
    - 模型切换接口
    - 模型性能对比
    - 预计工时: 1-2天
 
+---
+
+### 📋 待开发功能（3%）
+
 #### P3 - 可选
-3. **移动端适配**
+1. **移动端适配**
    - 响应式布局优化
    - PWA 支持
    - 预计工时: 1-2天
 
-4. **语音输入/输出**
+2. **语音输入/输出**
    - 语音识别（ASR）
    - 语音合成（TTS）
    - 预计工时: 2-3天
 
-5. **数据导出**
+3. **数据导出**
    - 会话导出（PDF/Markdown）
    - 记忆导出
    - 预计工时: 1天
 
-6. **管理后台**
+4. **管理后台**
    - 用户管理
    - 系统监控
    - 预计工时: 2-3天
