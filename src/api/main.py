@@ -1156,13 +1156,17 @@ def get_current_model(user_id: str = Depends(verify_token)):
 
 @app.post("/api/models/select")
 def select_model(
-    model_id: str,
+    data: dict,
     user_id: str = Depends(verify_token)
 ):
     """
     切换当前用户使用的模型
     """
     from ..utils.model_manager import model_manager
+    
+    model_id = data.get('model_id')
+    if not model_id:
+        raise HTTPException(status_code=400, detail="Missing model_id")
     
     success = model_manager.set_user_model(user_id, model_id)
     
@@ -1182,10 +1186,14 @@ def select_model(
     }
 
 
+class CompareRequest(BaseModel):
+    query: str
+    model_ids: List[str]
+
+
 @app.post("/api/models/compare")
 def compare_models(
-    query: str,
-    model_ids: List[str],
+    data: CompareRequest,
     user_id: str = Depends(verify_token)
 ):
     """
@@ -1193,16 +1201,16 @@ def compare_models(
     """
     from ..utils.model_manager import model_manager
     
-    if len(model_ids) > 3:
+    if len(data.model_ids) > 3:
         raise HTTPException(status_code=400, detail="最多对比3个模型")
     
-    if not query or len(query.strip()) < 2:
+    if not data.query or len(data.query.strip()) < 2:
         raise HTTPException(status_code=400, detail="查询内容太短")
     
-    results = model_manager.compare_models(query, model_ids)
+    results = model_manager.compare_models(data.query, data.model_ids)
     
     return {
-        "query": query,
+        "query": data.query,
         "comparisons": results,
         "total": len(results)
     }
