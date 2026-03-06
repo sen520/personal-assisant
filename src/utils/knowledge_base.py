@@ -94,7 +94,7 @@ class KnowledgeBase:
                     document_id=doc_id,
                     content=chunk_content,
                     chunk_index=i,
-                    metadata={"chunk_index": i, **parsed.get("metadata", {})}
+                    meta_data={"chunk_index": i, **parsed.get("metadata", {})}
                 )
                 chunk_ids.append(chunk_id)
             

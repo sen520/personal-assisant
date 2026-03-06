@@ -306,8 +306,8 @@ class DocumentChunk(Base):
     # 向量 ID（ChromaDB 中的 ID）
     vector_id = Column(String(100), nullable=True)
     
-    # 元数据
-    metadata = Column(JSON, default=dict)  # 页码、段落等信息
+    # 元数据 (使用 meta_data 避免与 SQLAlchemy 保留字冲突)
+    meta_data = Column(JSON, default=dict)  # 页码、段落等信息
     
     created_at = Column(DateTime, default=func.now())
     

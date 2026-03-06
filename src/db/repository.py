@@ -10,7 +10,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from .models import User, UserProfile, Session as ChatSession, Message, Memory, Task, db_manager
+from .models import User, UserProfile, Session as ChatSession, Message, Memory, Task, db_manager, Reminder, Document
 from ..models.base import UserProfile as UserProfileModel
 
 
@@ -521,7 +521,7 @@ class DocumentRepository:
     # ========== 文档分块 ==========
     
     def create_chunk(self, id: str, document_id: str, content: str,
-                     chunk_index: int, metadata: dict = None, vector_id: str = None):
+                     chunk_index: int, meta_data: dict = None, vector_id: str = None):
         """创建文档分块"""
         from .models import DocumentChunk
         
@@ -530,7 +530,7 @@ class DocumentRepository:
             document_id=document_id,
             content=content,
             chunk_index=chunk_index,
-            metadata=metadata or {},
+            meta_data=meta_data or {},
             vector_id=vector_id
         )
         self.session.add(chunk)
