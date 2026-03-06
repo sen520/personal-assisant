@@ -311,6 +311,130 @@ class VectorStore:
             logger.error(f"清除向量记忆失败: {e}")
             return False
 
+    def add_document_chunk(
+        self,
+        collection_name: str,
+        chunk_id: str,
+        content: str,
+        metadata: dict = None
+    ) -> bool:
+        """
+        添加文档分块到向量库
+        
+        Args:
+            collection_name: 集合名称
+            chunk_id: 块 ID
+            content: 块内容
+            metadata: 元数据
+        
+        Returns:
+            是否成功
+        """
+        if self._client is None:
+            self.init_chroma()
+        
+        if self._client is None:
+            return False
+        
+        try:
+            # 获取或创建集合
+            collection = self._client.get_or_create_collection(
+                name=collection_name,
+                embedding_function=self._embedding_func
+            )
+            
+            # 添加文档
+            collection.add(
+                ids=[chunk_id],
+                documents=[content],
+                metadatas=[metadata or {}]
+            )
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"添加文档分块失败: {e}")
+            return False
+    
+    def search_document(
+        self,
+        collection_name: str,
+        query: str,
+        n_results: int = 5,
+        min_score: float = 0.3
+    ) -> List[Dict[str, Any]]:
+        """
+        在文档集合中搜索
+        
+        Args:
+            collection_name: 集合名称
+            query: 查询
+            n_results: 结果数量
+            min_score: 最低相似度
+        
+        Returns:
+            搜索结果列表
+        """
+        if self._client is None:
+            self.init_chroma()
+        
+        if self._client is None:
+            return []
+        
+        try:
+            collection = self._client.get_collection(
+                name=collection_name,
+                embedding_function=self._embedding_func
+            )
+            
+            results = collection.query(
+                query_texts=[query],
+                n_results=n_results,
+                include=["documents", "metadatas", "distances"]
+            )
+            
+            # 格式化结果
+            search_results = []
+            if results["ids"] and results["ids"][0]:
+                for i, chunk_id in enumerate(results["ids"][0]):
+                    distance = results["distances"][0][i]
+                    similarity = 1 - (distance / 2)
+                    
+                    if similarity >= min_score:
+                        search_results.append({
+                            "vector_id": chunk_id,
+                            "content": results["documents"][0][i],
+                            "similarity": round(similarity, 4),
+                            "metadata": results["metadatas"][0][i]
+                        })
+            
+            return search_results
+            
+        except Exception as e:
+            logger.error(f"文档搜索失败: {e}")
+            return []
+    
+    def delete_collection(self, collection_name: str) -> bool:
+        """
+        删除整个集合
+        
+        Args:
+            collection_name: 集合名称
+        
+        Returns:
+            是否成功
+        """
+        if self._client is None:
+            return False
+        
+        try:
+            self._client.delete_collection(name=collection_name)
+            logger.info(f"向量集合已删除: {collection_name}")
+            return True
+        except Exception as e:
+            logger.error(f"删除向量集合失败: {e}")
+            return False
+
 
 # 全局向量存储实例
 vector_store = VectorStore()

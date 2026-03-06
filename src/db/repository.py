@@ -421,3 +421,132 @@ class ReminderRepository:
         
         self.session.commit()
         return True
+
+
+class DocumentRepository:
+    """文档数据访问"""
+    
+    def __init__(self, session: Session):
+        self.session = session
+    
+    def create(self, id: str, user_id: str, title: str, filename: str,
+               file_path: str, file_size: int, file_type: str) -> "Document":
+        """创建文档记录"""
+        from .models import Document
+        
+        doc = Document(
+            id=id,
+            user_id=user_id,
+            title=title,
+            filename=filename,
+            file_path=file_path,
+            file_size=file_size,
+            file_type=file_type,
+            status="processing"
+        )
+        self.session.add(doc)
+        self.session.commit()
+        self.session.refresh(doc)
+        return doc
+    
+    def get_by_id(self, document_id: str, user_id: str) -> Optional["Document"]:
+        """获取文档（带用户权限检查）"""
+        from .models import Document
+        return self.session.query(Document).filter(
+            Document.id == document_id,
+            Document.user_id == user_id
+        ).first()
+    
+    def get(self, document_id: str) -> Optional["Document"]:
+        """获取文档（不带权限检查）"""
+        from .models import Document
+        return self.session.query(Document).filter(
+            Document.id == document_id
+        ).first()
+    
+    def get_by_ids(self, document_ids: List[str], user_id: str) -> List["Document"]:
+        """批量获取文档"""
+        from .models import Document
+        return self.session.query(Document).filter(
+            Document.id.in_(document_ids),
+            Document.user_id == user_id
+        ).all()
+    
+    def list_by_user(self, user_id: str, status: str = None, limit: int = 100) -> List["Document"]:
+        """获取用户的文档列表"""
+        from .models import Document
+        
+        query = self.session.query(Document).filter(Document.user_id == user_id)
+        
+        if status:
+            query = query.filter(Document.status == status)
+        
+        return query.order_by(Document.created_at.desc()).limit(limit).all()
+    
+    def update_content(self, document_id: str, content: str, chunks_count: int):
+        """更新文档内容"""
+        doc = self.get(document_id)
+        if doc:
+            doc.content = content
+            doc.chunks_count = chunks_count
+            self.session.commit()
+    
+    def update_status(self, document_id: str, status: str, error_message: str = None):
+        """更新文档状态"""
+        doc = self.get(document_id)
+        if doc:
+            doc.status = status
+            if error_message:
+                doc.error_message = error_message
+            self.session.commit()
+    
+    def update_vector_status(self, document_id: str, is_vectorized: bool, collection_name: str = None):
+        """更新向量化状态"""
+        doc = self.get(document_id)
+        if doc:
+            doc.is_vectorized = 1 if is_vectorized else 0
+            if collection_name:
+                doc.vector_collection = collection_name
+            self.session.commit()
+    
+    def delete(self, document_id: str, user_id: str) -> bool:
+        """删除文档"""
+        doc = self.get_by_id(document_id, user_id)
+        if doc:
+            self.session.delete(doc)
+            self.session.commit()
+            return True
+        return False
+    
+    # ========== 文档分块 ==========
+    
+    def create_chunk(self, id: str, document_id: str, content: str,
+                     chunk_index: int, metadata: dict = None, vector_id: str = None):
+        """创建文档分块"""
+        from .models import DocumentChunk
+        
+        chunk = DocumentChunk(
+            id=id,
+            document_id=document_id,
+            content=content,
+            chunk_index=chunk_index,
+            metadata=metadata or {},
+            vector_id=vector_id
+        )
+        self.session.add(chunk)
+        self.session.commit()
+        return chunk
+    
+    def get_chunk_by_vector_id(self, vector_id: str) -> Optional["DocumentChunk"]:
+        """通过向量 ID 获取分块"""
+        from .models import DocumentChunk
+        return self.session.query(DocumentChunk).filter(
+            DocumentChunk.vector_id == vector_id
+        ).first()
+    
+    def get_chunks_by_document(self, document_id: str) -> List["DocumentChunk"]:
+        """获取文档的所有分块"""
+        from .models import DocumentChunk
+        return self.session.query(DocumentChunk).filter(
+            DocumentChunk.document_id == document_id
+        ).order_by(DocumentChunk.chunk_index).all()

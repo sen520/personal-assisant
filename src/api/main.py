@@ -4,11 +4,11 @@ FastAPI 应用 - RESTful API 接口层
 
 import uuid
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timedelta
 
 import jwt
-from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi import FastAPI, Depends, HTTPException, status, Request, UploadFile, File, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -956,6 +956,163 @@ def reindex_memories(user_id: str = Depends(verify_token)):
         }
     finally:
         memory.close()
+
+
+# ============================================================================
+# 知识库接口
+# ============================================================================
+
+@app.post("/api/knowledge/upload")
+async def upload_document(
+    file: UploadFile = File(...),
+    title: str = Form(None),
+    user_id: str = Depends(verify_token)
+):
+    """
+    上传文档到知识库
+    
+    支持格式: PDF, Word(.docx), TXT, Markdown, JSON, CSV
+    """
+    import os
+    from ..utils.knowledge_base import KnowledgeBase
+    from ..utils.document_parser import DocumentParser
+    
+    # 检查文件类型
+    if not DocumentParser.is_supported(file.filename):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"不支持的文件类型。支持: PDF, Word, TXT, Markdown, JSON, CSV"
+        )
+    
+    # 检查文件大小 (最大 50MB)
+    max_size = 50 * 1024 * 1024
+    file_content = await file.read()
+    if len(file_content) > max_size:
+        raise HTTPException(status_code=400, detail="文件大小超过 50MB 限制")
+    
+    # 保存临时文件
+    temp_dir = f"./uploads/{user_id}"
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    temp_path = f"{temp_dir}/{file.filename}"
+    with open(temp_path, "wb") as f:
+        f.write(file_content)
+    
+    try:
+        # 处理文档
+        session = db_manager.get_session()
+        try:
+            kb = KnowledgeBase(user_id, session)
+            result = kb.upload_document(
+                file_path=temp_path,
+                filename=file.filename,
+                file_size=len(file_content),
+                title=title
+            )
+            return result
+        finally:
+            session.close()
+            
+    except Exception as e:
+        logger.error(f"文档上传失败: {e}")
+        raise HTTPException(status_code=500, detail=f"文档处理失败: {str(e)}")
+    finally:
+        # 清理临时文件
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+
+@app.get("/api/knowledge/documents")
+def list_documents(
+    user_id: str = Depends(verify_token),
+    limit: int = 100
+):
+    """获取知识库文档列表"""
+    from ..utils.knowledge_base import KnowledgeBase
+    
+    session = db_manager.get_session()
+    try:
+        kb = KnowledgeBase(user_id, session)
+        documents = kb.list_documents(limit=limit)
+        return {"documents": documents, "total": len(documents)}
+    finally:
+        session.close()
+
+
+@app.get("/api/knowledge/documents/{document_id}")
+def get_document(
+    document_id: str,
+    user_id: str = Depends(verify_token)
+):
+    """获取文档详情"""
+    from ..utils.knowledge_base import KnowledgeBase
+    
+    session = db_manager.get_session()
+    try:
+        kb = KnowledgeBase(user_id, session)
+        doc = kb.get_document(document_id)
+        
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        return doc
+    finally:
+        session.close()
+
+
+@app.delete("/api/knowledge/documents/{document_id}")
+def delete_document(
+    document_id: str,
+    user_id: str = Depends(verify_token)
+):
+    """删除知识库文档"""
+    from ..utils.knowledge_base import KnowledgeBase
+    
+    session = db_manager.get_session()
+    try:
+        kb = KnowledgeBase(user_id, session)
+        success = kb.delete_document(document_id)
+        
+        if success:
+            return {"success": True, "message": "Document deleted"}
+        raise HTTPException(status_code=404, detail="Document not found")
+    finally:
+        session.close()
+
+
+@app.post("/api/knowledge/search")
+def search_knowledge(
+    query: str,
+    top_k: int = 5,
+    document_ids: List[str] = None,
+    user_id: str = Depends(verify_token)
+):
+    """
+    RAG 知识库检索
+    
+    使用语义搜索从上传的文档中检索相关内容
+    """
+    from ..utils.knowledge_base import KnowledgeBase
+    
+    if not query or len(query.strip()) < 2:
+        raise HTTPException(status_code=400, detail="查询内容太短")
+    
+    session = db_manager.get_session()
+    try:
+        kb = KnowledgeBase(user_id, session)
+        results = kb.search(
+            query=query,
+            top_k=top_k,
+            document_ids=document_ids
+        )
+        
+        return {
+            "query": query,
+            "results": results,
+            "total": len(results)
+        }
+    finally:
+        session.close()
 
 
 # ============================================================================

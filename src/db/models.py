@@ -252,6 +252,78 @@ class Reminder(Base):
 User.reminders = relationship("Reminder", back_populates="user")
 
 
+class Document(Base):
+    """上传文档表 - 知识库"""
+    __tablename__ = "documents"
+    
+    id = Column(String(36), primary_key=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    
+    # 文档信息
+    title = Column(String(255), nullable=False)
+    filename = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)  # 存储路径
+    file_size = Column(Integer, default=0)  # 文件大小（字节）
+    file_type = Column(String(50), nullable=False)  # pdf/docx/txt等
+    
+    # 文档内容
+    content = Column(Text, nullable=True)  # 完整文本内容
+    chunks_count = Column(Integer, default=0)  # 分块数量
+    
+    # 状态
+    status = Column(String(20), default="processing")  # processing, indexed, error
+    error_message = Column(Text, nullable=True)
+    
+    # 向量化状态
+    is_vectorized = Column(Integer, default=0)  # 0=否, 1=是
+    vector_collection = Column(String(100), nullable=True)  # 向量集合名称
+    
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # 关联
+    user = relationship("User", back_populates="documents")
+    chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        Index('idx_doc_user_id', 'user_id'),
+        Index('idx_doc_status', 'status'),
+        Index('idx_doc_created', 'created_at'),
+    )
+
+
+class DocumentChunk(Base):
+    """文档分块表 - 用于 RAG 检索"""
+    __tablename__ = "document_chunks"
+    
+    id = Column(String(36), primary_key=True)
+    document_id = Column(String(36), ForeignKey("documents.id"), nullable=False, index=True)
+    
+    # 分块内容
+    content = Column(Text, nullable=False)
+    chunk_index = Column(Integer, default=0)  # 块序号
+    
+    # 向量 ID（ChromaDB 中的 ID）
+    vector_id = Column(String(100), nullable=True)
+    
+    # 元数据
+    metadata = Column(JSON, default=dict)  # 页码、段落等信息
+    
+    created_at = Column(DateTime, default=func.now())
+    
+    # 关联
+    document = relationship("Document", back_populates="chunks")
+    
+    __table_args__ = (
+        Index('idx_chunk_doc_id', 'document_id'),
+        Index('idx_chunk_vector_id', 'vector_id'),
+    )
+
+
+# 添加关系到 User 类
+User.documents = relationship("Document", back_populates="user")
+
+
 # ============================================================================
 # 数据库连接管理
 # ============================================================================
