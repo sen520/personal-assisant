@@ -1217,6 +1217,282 @@ def compare_models(
 
 
 # ============================================================================
+# 数据导出接口
+# ============================================================================
+
+@app.get("/api/export/session/{session_id}")
+def export_session(
+    session_id: str,
+    format: str = "markdown",
+    user_id: str = Depends(verify_token)
+):
+    """
+    导出会话记录
+    
+    支持格式: markdown, pdf, json
+    """
+    from ..utils.data_exporter import DataExporter, get_export_filename
+    from fastapi.responses import StreamingResponse
+    
+    try:
+        exporter = DataExporter(user_id)
+        content = exporter.export_session(session_id, format)
+        
+        filename = get_export_filename("session", format)
+        
+        media_types = {
+            "markdown": "text/markdown",
+            "pdf": "application/pdf",
+            "json": "application/json"
+        }
+        
+        return StreamingResponse(
+            iter([content]),
+            media_type=media_types.get(format, "application/octet-stream"),
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        logger.error(f"导出会话失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/export/sessions")
+def export_all_sessions(
+    format: str = "json",
+    user_id: str = Depends(verify_token)
+):
+    """导出所有会话"""
+    from ..utils.data_exporter import DataExporter, get_export_filename
+    from fastapi.responses import StreamingResponse
+    
+    try:
+        exporter = DataExporter(user_id)
+        content = exporter.export_all_sessions(format)
+        
+        filename = get_export_filename("all_sessions", format)
+        
+        return StreamingResponse(
+            iter([content]),
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        logger.error(f"导出会话失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/export/memories")
+def export_memories(
+    format: str = "markdown",
+    user_id: str = Depends(verify_token)
+):
+    """
+    导出记忆
+    
+    支持格式: markdown, json
+    """
+    from ..utils.data_exporter import DataExporter, get_export_filename
+    from fastapi.responses import StreamingResponse
+    
+    try:
+        exporter = DataExporter(user_id)
+        content = exporter.export_memories(format)
+        
+        filename = get_export_filename("memories", format)
+        
+        media_types = {
+            "markdown": "text/markdown",
+            "json": "application/json"
+        }
+        
+        return StreamingResponse(
+            iter([content]),
+            media_type=media_types.get(format, "application/octet-stream"),
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        logger.error(f"导出记忆失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/export/tasks")
+def export_tasks(
+    format: str = "markdown",
+    user_id: str = Depends(verify_token)
+):
+    """
+    导出任务
+    
+    支持格式: markdown, json
+    """
+    from ..utils.data_exporter import DataExporter, get_export_filename
+    from fastapi.responses import StreamingResponse
+    
+    try:
+        exporter = DataExporter(user_id)
+        content = exporter.export_tasks(format)
+        
+        filename = get_export_filename("tasks", format)
+        
+        media_types = {
+            "markdown": "text/markdown",
+            "json": "application/json"
+        }
+        
+        return StreamingResponse(
+            iter([content]),
+            media_type=media_types.get(format, "application/octet-stream"),
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        logger.error(f"导出任务失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/export/all")
+def export_all_data(user_id: str = Depends(verify_token)):
+    """
+    导出所有数据（完整备份）
+    
+    格式: JSON
+    """
+    from ..utils.data_exporter import DataExporter, get_export_filename
+    from fastapi.responses import StreamingResponse
+    
+    try:
+        exporter = DataExporter(user_id)
+        content = exporter.export_all()
+        
+        filename = get_export_filename("full_backup", "json")
+        
+        return StreamingResponse(
+            iter([content]),
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        logger.error(f"导出所有数据失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# 管理后台接口
+# ============================================================================
+
+@app.get("/api/admin/stats")
+def get_admin_stats(user_id: str = Depends(verify_token)):
+    """
+    获取管理后台统计数据
+    
+    需要管理员权限
+    """
+    from ..utils.admin_service import AdminService, is_admin
+    
+    if not is_admin(user_id):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    return {
+        "system": AdminService.get_system_stats(),
+        "database": AdminService.get_database_stats(),
+        "cache": AdminService.get_cache_stats(),
+        "vector": AdminService.get_vector_stats()
+    }
+
+
+@app.get("/api/admin/users")
+def list_users(
+    skip: int = 0,
+    limit: int = 100,
+    search: str = None,
+    user_id: str = Depends(verify_token)
+):
+    """
+    获取用户列表
+    
+    需要管理员权限
+    """
+    from ..utils.admin_service import AdminService, is_admin
+    
+    if not is_admin(user_id):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = AdminService.list_users(skip=skip, limit=limit, search=search)
+    return {
+        "users": users,
+        "total": len(users),
+        "skip": skip,
+        "limit": limit
+    }
+
+
+@app.get("/api/admin/users/{target_user_id}")
+def get_user_detail(
+    target_user_id: str,
+    user_id: str = Depends(verify_token)
+):
+    """
+    获取用户详情
+    
+    需要管理员权限
+    """
+    from ..utils.admin_service import AdminService, is_admin
+    
+    if not is_admin(user_id):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    user = AdminService.get_user_detail(target_user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return user
+
+
+@app.post("/api/admin/users/{target_user_id}/toggle")
+def toggle_user_status(
+    target_user_id: str,
+    is_active: bool,
+    user_id: str = Depends(verify_token)
+):
+    """
+    启用/禁用用户
+    
+    需要管理员权限
+    """
+    from ..utils.admin_service import AdminService, is_admin
+    
+    if not is_admin(user_id):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    success = AdminService.toggle_user_status(target_user_id, is_active)
+    
+    if success:
+        return {
+            "success": True,
+            "message": f"User {'activated' if is_active else 'deactivated'}"
+        }
+    raise HTTPException(status_code=404, detail="User not found")
+
+
+@app.get("/api/admin/logs")
+def get_system_logs(
+    limit: int = 100,
+    user_id: str = Depends(verify_token)
+):
+    """
+    获取系统日志
+    
+    需要管理员权限
+    """
+    from ..utils.admin_service import AdminService, is_admin
+    
+    if not is_admin(user_id):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    logs = AdminService.get_logs(limit)
+    return {"logs": logs, "total": len(logs)}
+
+
+# ============================================================================
 # 健康检查
 # ============================================================================
 
