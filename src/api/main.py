@@ -22,6 +22,7 @@ from ..config.settings import settings
 from ..db.models import db_manager
 from ..db.repository import AuthService
 from ..db.memory_system import MemorySystemFactory
+from ..utils.cache import cache_manager, cache_response
 
 
 # ============================================================================
@@ -210,11 +211,17 @@ limiter = Limiter(key_func=get_remote_address)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
-    # 启动时初始化数据库
+    # 启动时初始化数据库和缓存
     from ..db.connection import init_database_with_retry
+    from ..utils.cache import init_cache
+    
     init_database_with_retry()
+    init_cache()
+    
     yield
+    
     # 关闭时清理
+    logger.info("应用关闭，清理资源...")
 
 
 app = FastAPI(
@@ -347,6 +354,7 @@ def create_session(session_data: SessionCreate, user_id: str = Depends(verify_to
 
 
 @app.get("/api/sessions")
+@cache_response("sessions", expire=60)  # 缓存1分钟
 def list_sessions(user_id: str = Depends(verify_token), limit: int = 20):
     """获取会话列表"""
     memory = MemorySystemFactory.for_user(user_id)
@@ -538,6 +546,7 @@ def create_task(task_data: TaskCreate, user_id: str = Depends(verify_token)):
 
 
 @app.get("/api/tasks")
+@cache_response("tasks", expire=60)  # 缓存1分钟
 def list_tasks(
     user_id: str = Depends(verify_token),
     status: Optional[str] = None,
@@ -596,6 +605,7 @@ def delete_task(task_id: str, user_id: str = Depends(verify_token)):
 # ============================================================================
 
 @app.get("/api/stats")
+@cache_response("stats", expire=30)  # 缓存30秒
 def get_stats(user_id: str = Depends(verify_token)):
     """获取用户统计"""
     memory = MemorySystemFactory.for_user(user_id)
@@ -604,6 +614,24 @@ def get_stats(user_id: str = Depends(verify_token)):
         return stats
     finally:
         memory.close()
+
+
+# ============================================================================
+# 缓存管理接口
+# ============================================================================
+
+@app.get("/api/admin/cache/stats")
+def get_cache_stats(user_id: str = Depends(verify_token)):
+    """获取缓存统计（管理员）"""
+    from ..utils.cache import get_cache_stats
+    return get_cache_stats()
+
+
+@app.post("/api/admin/cache/invalidate")
+def invalidate_user_cache(user_id: str = Depends(verify_token)):
+    """清除当前用户缓存"""
+    count = cache_manager.invalidate_user_cache(user_id)
+    return {"success": True, "cleared_keys": count}
 
 
 # ============================================================================

@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     # 向量数据库
     chroma_persist_dir: str = "./chroma_db"
     
+    # Redis 配置
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+    redis_password: Optional[str] = None
+    
     class Config:
         env_file = ".env"
 
