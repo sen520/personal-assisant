@@ -90,11 +90,14 @@
 
 | 指标 | 数值 |
 |------|------|
+| **完成度** | 100% |
 | **API 接口** | 30个 |
 | **功能模块** | 21个 |
 | **支持模型** | 17+ |
 | **代码行数** | ~12,000行 |
 | **数据库表** | 8个 |
+| **Git 提交** | ~45次 |
+| **测试用例** | 16个 |
 
 ---
 
@@ -115,8 +118,8 @@
 ### 记忆接口
 - `POST /api/memories` - 创建记忆
 - `GET /api/memories` - 记忆列表（支持语义搜索）
-- `DELETE /api/memories/{id}` - 删除记忆
 - `POST /api/memories/search` - 语义搜索
+- `DELETE /api/memories/{id}` - 删除记忆
 
 ### 任务接口
 - `POST /api/tasks` - 创建任务
@@ -125,14 +128,15 @@
 - `DELETE /api/tasks/{id}` - 删除任务
 
 ### 提醒接口
+- `POST /api/reminders` - 创建提醒
 - `GET /api/reminders` - 提醒列表
 - `POST /api/reminders/{id}/snooze` - 推迟提醒
 - `POST /api/reminders/{id}/dismiss` - 关闭提醒
 - `DELETE /api/reminders/{id}` - 删除提醒
 
 ### 模型接口
-- `GET /api/models` - 模型列表
-- `GET /api/models/current` - 当前模型
+- `GET /api/models` - 获取可用模型列表
+- `GET /api/models/current` - 获取当前模型
 - `POST /api/models/select` - 切换模型
 - `POST /api/models/compare` - 模型对比
 
@@ -169,8 +173,8 @@
 - **框架**: FastAPI + Python 3.11
 - **工作流**: LangGraph
 - **数据库**: MySQL 8.0 / SQLite
-- **缓存**: Redis
-- **向量**: ChromaDB
+- **缓存**: Redis (可选)
+- **向量**: ChromaDB (可选)
 - **认证**: JWT + bcrypt
 - **任务调度**: APScheduler
 
@@ -189,34 +193,58 @@
 ## 6. 部署说明
 
 ### 环境变量
+
 ```bash
+# ============================================
 # LLM 配置
+# ============================================
 LLM_PROVIDER=openai
 LLM_MODEL=deepseek-ai/DeepSeek-V3
-LLM_API_KEY=your_api_key
+LLM_API_KEY=your_api_key_here
 LLM_BASE_URL=https://api.siliconflow.cn/v1
 
-# 数据库
+# 嵌入模型
+EMBEDDING_MODEL=BAAI/bge-large-zh-v1.5
+
+# ============================================
+# 数据库配置
+# ============================================
+# SQLite 模式（开发/测试用，默认）
 USE_SQLITE=true
 SQLITE_PATH=./data/app.db
 
-# 或 MySQL
-DB_USER=root
-DB_PASSWORD=password
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=personal_assistant
+# 或 MySQL（生产环境）
+# USE_SQLITE=false
+# DB_USER=root
+# DB_PASSWORD=password
+# DB_HOST=localhost
+# DB_PORT=3306
+# DB_NAME=personal_assistant
 
-# JWT
-JWT_SECRET_KEY=your-secret-key
+# ============================================
+# JWT 配置
+# ============================================
+JWT_SECRET_KEY=your-secret-key-change-in-production
+JWT_ALGORITHM=HS256
 JWT_EXPIRE_DAYS=7
 
-# Redis
+# ============================================
+# Redis 配置（可选）
+# ============================================
 REDIS_HOST=localhost
 REDIS_PORT=6379
+REDIS_DB=0
+
+# ============================================
+# 其他配置
+# ============================================
+PROJECT_NAME=personal-assistant
+DEBUG=false
+LOG_LEVEL=INFO
 ```
 
 ### 启动命令
+
 ```bash
 # 开发模式
 python main.py
@@ -225,9 +253,49 @@ python main.py
 uvicorn src.api.main:app --reload --port 8000
 ```
 
+### Docker 部署
+
+```bash
+# 启动所有服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f app
+```
+
 ---
 
-## 7. 后续可选扩展
+## 7. 测试
+
+### 集成测试
+
+```bash
+python3 tests/test_integration.py
+```
+
+**结果**: 6/6 项通过 ✅
+- 模块导入
+- 配置加载
+- 数据库连接
+- 认证服务
+- 数据模型
+- 工具函数
+
+### API 测试
+
+```bash
+python3 -m pytest tests/test_api.py -v
+```
+
+### 数据库测试
+
+```bash
+python3 -m pytest tests/test_db.py -v
+```
+
+---
+
+## 8. 后续可选扩展
 
 | 功能 | 说明 | 优先级 |
 |------|------|--------|
@@ -236,6 +304,26 @@ uvicorn src.api.main:app --reload --port 8000
 
 ---
 
+## 9. 项目文档
+
+- [项目说明](./README.md)
+- [待办事项](./tips.md)
+
+---
+
+## 10. Git 仓库
+
+```bash
+# 克隆项目
+git clone https://github.com/sen520/personal-assistant.git
+
+# 分支
+- main: 生产分支
+- develop: 开发分支（当前）
+```
+
+---
+
 *文档版本: v3.0*  
 *最后更新: 2026-03-06*  
-*项目状态: ✅ 已完成*
+*项目状态: ✅ 已完成 (100%)*
