@@ -1116,6 +1116,99 @@ def search_knowledge(
 
 
 # ============================================================================
+# 模型管理接口
+# ============================================================================
+
+@app.get("/api/models")
+def list_models(user_id: str = Depends(verify_token)):
+    """
+    获取可用的 LLM 模型列表
+    """
+    from ..utils.model_manager import model_manager
+    
+    models = model_manager.get_available_models()
+    current_model = model_manager.get_user_model(user_id)
+    
+    return {
+        "models": models,
+        "current_model": current_model.id if current_model else None,
+        "total": len(models)
+    }
+
+
+@app.get("/api/models/current")
+def get_current_model(user_id: str = Depends(verify_token)):
+    """获取当前用户选择的模型"""
+    from ..utils.model_manager import model_manager
+    
+    model = model_manager.get_user_model(user_id)
+    if not model:
+        raise HTTPException(status_code=404, detail="No model configured")
+    
+    return {
+        "id": model.id,
+        "name": model.name,
+        "provider": model.provider,
+        "description": model.description,
+        "max_tokens": model.max_tokens
+    }
+
+
+@app.post("/api/models/select")
+def select_model(
+    model_id: str,
+    user_id: str = Depends(verify_token)
+):
+    """
+    切换当前用户使用的模型
+    """
+    from ..utils.model_manager import model_manager
+    
+    success = model_manager.set_user_model(user_id, model_id)
+    
+    if not success:
+        raise HTTPException(status_code=400, detail=f"Invalid model: {model_id}")
+    
+    model = model_manager.get_model_by_id(model_id)
+    
+    return {
+        "success": True,
+        "message": f"Model switched to {model.name if model else model_id}",
+        "model": {
+            "id": model_id,
+            "name": model.name if model else model_id,
+            "provider": model.provider if model else "unknown"
+        }
+    }
+
+
+@app.post("/api/models/compare")
+def compare_models(
+    query: str,
+    model_ids: List[str],
+    user_id: str = Depends(verify_token)
+):
+    """
+    对比多个模型的回复
+    """
+    from ..utils.model_manager import model_manager
+    
+    if len(model_ids) > 3:
+        raise HTTPException(status_code=400, detail="最多对比3个模型")
+    
+    if not query or len(query.strip()) < 2:
+        raise HTTPException(status_code=400, detail="查询内容太短")
+    
+    results = model_manager.compare_models(query, model_ids)
+    
+    return {
+        "query": query,
+        "comparisons": results,
+        "total": len(results)
+    }
+
+
+# ============================================================================
 # 健康检查
 # ============================================================================
 
