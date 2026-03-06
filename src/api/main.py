@@ -2,6 +2,7 @@
 FastAPI 应用 - RESTful API 接口层
 """
 
+import uuid
 from contextlib import asynccontextmanager
 from typing import Optional
 from datetime import datetime, timedelta
@@ -23,6 +24,11 @@ from ..db.models import db_manager
 from ..db.repository import AuthService
 from ..db.memory_system import MemorySystemFactory
 from ..utils.cache import cache_manager, cache_response
+from ..utils.logging import configure_logging, get_logger, RequestContext
+
+# 配置日志
+configure_logging()
+logger = get_logger(__name__)
 
 
 # ============================================================================
@@ -211,17 +217,22 @@ limiter = Limiter(key_func=get_remote_address)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
-    # 启动时初始化数据库和缓存
     from ..db.connection import init_database_with_retry
     from ..utils.cache import init_cache
+    
+    logger.info("应用启动中...")
     
     init_database_with_retry()
     init_cache()
     
+    logger.info("✅ 应用启动完成")
+    
     yield
     
     # 关闭时清理
-    logger.info("应用关闭，清理资源...")
+    logger.info("应用关闭中...")
+    RequestContext.clear()
+    logger.info("✅ 应用已关闭")
 
 
 app = FastAPI(
@@ -243,6 +254,39 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 请求 ID 中间件
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    """为每个请求添加唯一 ID"""
+    request_id = str(uuid.uuid4())[:8]
+    RequestContext.bind_request_id(request_id)
+    
+    # 记录请求
+    logger.info(
+        "request_started",
+        method=request.method,
+        path=request.url.path,
+        client=request.client.host if request.client else "unknown"
+    )
+    
+    response = await call_next(request)
+    
+    # 记录响应
+    logger.info(
+        "request_completed",
+        method=request.method,
+        path=request.url.path,
+        status_code=response.status_code
+    )
+    
+    # 添加请求 ID 到响应头
+    response.headers["X-Request-ID"] = request_id
+    
+    # 清除上下文
+    RequestContext.clear()
+    
+    return response
 
 
 # ============================================================================
