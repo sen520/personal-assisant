@@ -219,11 +219,13 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     from ..db.connection import init_database_with_retry
     from ..utils.cache import init_cache
+    from ..utils.vector_store import init_vector_store
     
     logger.info("应用启动中...")
     
     init_database_with_retry()
     init_cache()
+    init_vector_store()
     
     logger.info("✅ 应用启动完成")
     
@@ -525,13 +527,23 @@ def create_memory(memory_data: MemoryCreate, user_id: str = Depends(verify_token
 @app.get("/api/memories")
 def list_memories(
     user_id: str = Depends(verify_token),
+    query: Optional[str] = None,
     category: Optional[str] = None,
+    semantic: bool = False,
     limit: int = 100
 ):
-    """获取记忆列表"""
+    """
+    获取/搜索记忆列表
+    
+    参数:
+        - query: 搜索关键词（语义搜索时使用）
+        - category: 类别过滤
+        - semantic: 是否使用语义搜索（默认 False）
+        - limit: 返回数量
+    """
     memory = MemorySystemFactory.for_user(user_id)
     try:
-        memories = memory.recall(category=category, limit=limit)
+        memories = memory.recall(query=query, category=category, limit=limit, semantic=semantic)
         return {
             "memories": [
                 MemoryResponse(
@@ -539,11 +551,13 @@ def list_memories(
                     content=m.content,
                     category=m.category,
                     importance=m.importance,
-                    created_at=m.created_at.isoformat()
+                    created_at=m.created_at.isoformat(),
+                    metadata=m.metadata
                 )
                 for m in memories
             ],
-            "total": len(memories)
+            "total": len(memories),
+            "search_type": "semantic" if semantic else "keyword"
         }
     finally:
         memory.close()
@@ -551,15 +565,54 @@ def list_memories(
 
 @app.delete("/api/memories/{memory_id}")
 def delete_memory(memory_id: str, user_id: str = Depends(verify_token)):
-    """删除记忆"""
+    """删除记忆（同时删除向量和数据库）"""
     memory = MemorySystemFactory.for_user(user_id)
     try:
+        # 1. 删除向量
+        from ..utils.vector_store import vector_store
+        vector_store.delete_memory(user_id, memory_id)
+        
+        # 2. 删除数据库记录
         success = memory.memory_repo.delete(memory_id, user_id)
         if success:
             return {"success": True, "message": "Memory deleted"}
         raise HTTPException(status_code=404, detail="Memory not found")
     finally:
         memory.close()
+
+
+@app.post("/api/memories/search")
+def semantic_search(
+    query: str,
+    user_id: str = Depends(verify_token),
+    category: Optional[str] = None,
+    limit: int = 10,
+    min_score: float = 0.3
+):
+    """
+    语义搜索记忆
+    
+    使用向量相似度进行语义检索，不需要关键词完全匹配
+    """
+    from ..utils.vector_store import vector_store
+    
+    try:
+        results = vector_store.search(
+            user_id=user_id,
+            query=query,
+            n_results=limit,
+            category=category,
+            min_score=min_score
+        )
+        
+        return {
+            "query": query,
+            "results": results,
+            "total": len(results)
+        }
+    except Exception as e:
+        logger.error(f"语义搜索失败: {e}")
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
 # ============================================================================
@@ -676,6 +729,58 @@ def invalidate_user_cache(user_id: str = Depends(verify_token)):
     """清除当前用户缓存"""
     count = cache_manager.invalidate_user_cache(user_id)
     return {"success": True, "cleared_keys": count}
+
+
+# ============================================================================
+# 向量存储管理接口
+# ============================================================================
+
+@app.get("/api/admin/vector/stats")
+def get_vector_stats(user_id: str = Depends(verify_token)):
+    """获取向量存储统计"""
+    from ..utils.vector_store import vector_store
+    stats = vector_store.get_stats(user_id)
+    return {
+        "user_id_prefix": user_id[:8] + "...",
+        "vector_count": stats.get("count", 0),
+        "status": "active" if stats.get("count") is not None else "error"
+    }
+
+
+@app.post("/api/admin/vector/reindex")
+def reindex_memories(user_id: str = Depends(verify_token)):
+    """重新索引所有记忆到向量库"""
+    from ..utils.vector_store import vector_store
+    
+    memory = MemorySystemFactory.for_user(user_id)
+    try:
+        # 1. 清除现有向量
+        vector_store.clear_user_memories(user_id)
+        
+        # 2. 获取所有记忆
+        all_memories = memory.recall(limit=1000)
+        
+        # 3. 重新索引
+        indexed = 0
+        for mem in all_memories:
+            success = vector_store.add_memory(
+                user_id=user_id,
+                memory_id=mem.id,
+                content=mem.content,
+                category=mem.category,
+                importance=mem.importance,
+                metadata=mem.metadata
+            )
+            if success:
+                indexed += 1
+        
+        return {
+            "success": True,
+            "total_memories": len(all_memories),
+            "indexed": indexed
+        }
+    finally:
+        memory.close()
 
 
 # ============================================================================

@@ -1,5 +1,5 @@
 """
-基于 MySQL 的记忆系统 - 支持多用户数据隔离
+基于 MySQL 的记忆系统 - 支持多用户数据隔离和向量语义检索
 """
 
 import logging
@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Optional
 from .models import db_manager
 from .repository import MemoryRepository, UserRepository, SessionRepository, TaskRepository
 from ..models.base import MemoryItem, UserProfile, Message
+from ..utils.vector_store import vector_store
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,7 @@ class MySQLMemorySystem:
     def remember(self, content: str, category: str = "general", 
                  importance: int = 3, metadata: Dict = None) -> str:
         """
-        存储到长期记忆
+        存储到长期记忆（MySQL + 向量存储）
         
         Args:
             content: 记忆内容
@@ -98,6 +99,7 @@ class MySQLMemorySystem:
         Returns:
             记忆 ID
         """
+        # 1. 存储到 MySQL
         memory = self.memory_repo.create(
             user_id=self.user_id,
             content=content,
@@ -105,25 +107,45 @@ class MySQLMemorySystem:
             importance=importance,
             metadata=metadata or {}
         )
+        
+        # 2. 存储到向量库（异步语义检索）
+        try:
+            vector_store.add_memory(
+                user_id=self.user_id,
+                memory_id=memory.id,
+                content=content,
+                category=category,
+                importance=importance,
+                metadata=metadata
+            )
+        except Exception as e:
+            logger.warning(f"向量存储失败（不影响主流程）: {e}")
+        
         logger.info(f"💾 记忆已存储 [{memory.id}]: {content[:50]}...")
         return memory.id
     
     def recall(self, query: str = None, category: str = None, 
-               limit: int = 10) -> List[MemoryItem]:
+               limit: int = 10, semantic: bool = False) -> List[MemoryItem]:
         """
         检索长期记忆
         
         Args:
-            query: 查询关键词（暂不支持语义检索，使用简单过滤）
+            query: 查询关键词或语义查询
             category: 类别过滤
             limit: 返回数量
+            semantic: 是否使用语义检索（需要 query 参数）
         
         Returns:
             记忆列表
         """
+        # 使用语义检索
+        if semantic and query:
+            return self._semantic_search(query, category, limit)
+        
+        # 使用数据库检索（关键词匹配）
         memories = self.memory_repo.list_by_user(self.user_id, category, limit)
         
-        # 简单的关键词过滤（后续可以接入向量检索）
+        # 简单的关键词过滤
         if query:
             query_lower = query.lower()
             memories = [m for m in memories if query_lower in m.content.lower()]
@@ -141,6 +163,65 @@ class MySQLMemorySystem:
             )
             for m in memories
         ]
+    
+    def _semantic_search(
+        self, 
+        query: str, 
+        category: Optional[str] = None, 
+        limit: int = 10
+    ) -> List[MemoryItem]:
+        """
+        语义搜索记忆
+        
+        Args:
+            query: 语义查询
+            category: 类别过滤
+            limit: 返回数量
+        
+        Returns:
+            记忆列表
+        """
+        try:
+            results = vector_store.search(
+                user_id=self.user_id,
+                query=query,
+                n_results=limit,
+                category=category,
+                min_score=0.3  # 最低相似度阈值
+            )
+            
+            # 更新访问统计
+            memory_items = []
+            for result in results:
+                memory_id = result["memory_id"]
+                # 从数据库获取完整信息
+                db_memory = self.memory_repo.get(memory_id)
+                if db_memory:
+                    # 更新访问统计
+                    self.memory_repo.update_access(memory_id)
+                    memory_items.append(
+                        MemoryItem(
+                            id=db_memory.id,
+                            content=db_memory.content,
+                            category=db_memory.category,
+                            importance=db_memory.importance,
+                            created_at=db_memory.created_at,
+                            last_accessed=db_memory.last_accessed,
+                            access_count=db_memory.access_count,
+                            metadata={
+                                **(db_memory.metadata or {}),
+                                "similarity": result["similarity"]  # 添加相似度分数
+                            }
+                        )
+                    )
+            
+            logger.info(f"🔍 语义搜索 '{query[:30]}...' 找到 {len(memory_items)} 条结果")
+            return memory_items
+            
+        except Exception as e:
+            logger.error(f"语义搜索失败: {e}")
+            # 降级到普通搜索
+            return self.recall(query, category, limit, semantic=False)
     
     def get_relevant_memories_for_input(self, user_input: str) -> str:
         """根据用户输入获取相关记忆，格式化为上下文"""
