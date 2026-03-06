@@ -7,12 +7,15 @@ from typing import Optional
 from datetime import datetime, timedelta
 
 import jwt
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import uvicorn
 
 from ..config.settings import settings
@@ -26,9 +29,9 @@ from ..db.memory_system import MemorySystemFactory
 # ============================================================================
 
 # 从环境变量获取密钥，如果没有则使用默认（生产环境必须设置）
-JWT_SECRET_KEY = getattr(settings, 'jwt_secret_key', 'your-secret-key-here-change-in-production')
-JWT_ALGORITHM = "HS256"
-JWT_EXPIRE_DAYS = 7
+JWT_SECRET_KEY = settings.jwt_secret_key
+JWT_ALGORITHM = settings.jwt_algorithm
+JWT_EXPIRE_DAYS = settings.jwt_expire_days
 
 
 # ============================================================================
@@ -201,11 +204,15 @@ class ChatResponse(BaseModel):
 # FastAPI 应用
 # ============================================================================
 
+# 初始化限流器
+limiter = Limiter(key_func=get_remote_address)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时初始化数据库
-    db_manager.init_engine()
+    from ..db.connection import init_database_with_retry
+    init_database_with_retry()
     yield
     # 关闭时清理
 
@@ -216,6 +223,10 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+# 配置限流器
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS 配置
 app.add_middleware(
@@ -246,7 +257,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # ============================================================================
 
 @app.post("/api/auth/register", response_model=TokenResponse)
-def register(user_data: UserCreate):
+@limiter.limit("5/minute")  # 注册限流：每分钟5次
+def register(user_data: UserCreate, request: Request):
     """用户注册"""
     from sqlalchemy.orm import Session as SQLSession
     from ..db.models import User
@@ -281,7 +293,8 @@ def register(user_data: UserCreate):
 
 
 @app.post("/api/auth/login", response_model=TokenResponse)
-def login(user_data: UserLogin):
+@limiter.limit("10/minute")  # 登录限流：每分钟10次
+def login(user_data: UserLogin, request: Request):
     """用户登录"""
     session = db_manager.get_session()
     try:
@@ -349,7 +362,8 @@ def list_sessions(user_id: str = Depends(verify_token), limit: int = 20):
 # ============================================================================
 
 @app.post("/api/chat", response_model=ChatResponse)
-def chat(message_data: MessageCreate, user_id: str = Depends(verify_token)):
+@limiter.limit("30/minute")  # 聊天限流：每分钟30次
+def chat(message_data: MessageCreate, request: Request, user_id: str = Depends(verify_token)):
     """
     发送消息并获取回复
     """
@@ -598,8 +612,44 @@ def get_stats(user_id: str = Depends(verify_token)):
 
 @app.get("/health")
 def health_check():
-    """健康检查"""
-    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+    """健康检查 - 包含数据库状态"""
+    from ..db.connection import check_database_health
+    
+    db_health = check_database_health()
+    
+    if db_health["status"] != "healthy":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"status": "unhealthy", "database": db_health}
+        )
+    
+    return {
+        "status": "ok",
+        "database": db_health,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/health/live")
+def liveness_probe():
+    """存活探针 - 仅检查服务是否运行"""
+    return {"status": "alive"}
+
+
+@app.get("/health/ready")
+def readiness_probe():
+    """就绪探针 - 检查服务是否准备好接收流量"""
+    from ..db.connection import check_database_health
+    
+    db_health = check_database_health()
+    
+    if db_health["status"] != "healthy":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"ready": False, "reason": "Database unavailable"}
+        )
+    
+    return {"ready": True}
 
 
 # ============================================================================

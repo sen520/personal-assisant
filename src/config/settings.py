@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: str = "INFO"
     
+    # JWT 配置
+    jwt_secret_key: str = "your-secret-key-here-change-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_days: int = 7
+    
     # 记忆配置
     memory_storage_path: str = "./memory"
     max_memory_items: int = 1000
